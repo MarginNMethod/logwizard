@@ -91,9 +91,9 @@ Last updated: 2026-10-11.
 **Result.**
 - Current API IDs: `claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`.
 - `claude-sonnet-5-5` is described as the best mix of speed and intelligence, at $2 per million input tokens and $10 per million output tokens. All current models support tool use.
-- For a plan of a few thousand tokens, the cost per interview is a fraction of a cent to a few cents, so cost is not a driver. The spend cap and rate limit still apply.
+- API pricing is listed for reference only. Under the zero-cost rule (`PLAN.md` section 3a) the project makes no paid API calls: replay mode is the default and visitors may bring their own key.
 
-**Decision.** Default `ANTHROPIC_MODEL=claude-sonnet-5-5`, read from the environment so it can be changed without code edits. Haiku 5.5 is a candidate to compare in the eval set for lower cost.
+**Decision.** For bring-your-own-key mode, default `ANTHROPIC_MODEL=claude-sonnet-5-5`, read from the environment so it can be changed without code edits. The default path needs no key at all.
 
 **Still to do.** Confirm the structured output approach (tool use with the Zod schema converted to JSON Schema, versus a dedicated structured output feature) when building Phase 3. Not needed before Gate 0.
 

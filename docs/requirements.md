@@ -18,6 +18,7 @@ Small teams track interactions (emails with employers, calls with donors, contac
 - G-2. A reviewer can see the whole flow without a Google sign-in.
 - G-3. The AI never produces anything that runs in a user's account.
 - G-4. Every claim in the case study is a measured number.
+- G-5. The project costs $0 to build and to run.
 
 ## Non-goals
 
@@ -45,7 +46,7 @@ Payments, multiple organizations, storing any user's plan or records on the serv
 - N-1. **Privacy.** Server-side storage is limited to anonymous funnel metrics and rate-limit counters, deleted after 90 days. No emails, answers, plans, or sheet links.
 - N-2. **Security.** AI output is validated before use. User-entered cell values are written as plain text. Secrets stay in environment variables.
 - N-3. **Least privilege.** Smallest workable Google scopes, with no restricted scopes.
-- N-4. **Cost control.** Input length caps, rate limiting, bot protection, and an Anthropic spend cap.
+- N-4. **Zero cost.** The project costs $0 to build and run: free plans only, no billing accounts, no purchased domain, and no server-side AI key. The app and its tests work with no AI key set.
 - N-5. **Accessibility.** The web app meets WCAG 2.1 AA.
 - N-6. **Reliability.** Email use stays within the daily limits (100 per day personal, 1,500 per day Workspace, per `SPIKES.md`).
 - N-7. **Testability.** Schema and engine decision logic are pure functions with unit tests. The AI step has an eval set with automatic pass criteria.

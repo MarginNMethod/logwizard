@@ -28,12 +28,13 @@ This is a **portfolio project to show hiring managers** for analyst, systems, an
 - The project must produce analyst artifacts (requirements, user stories, data model, test plan, case study), not just code.
 - One platform working well (Google) beats two platforms half working.
 - A hiring manager must be able to see it work **without a Google sign-in** (Demo mode, section 5a).
+- **The project costs $0 to build and to run** (section 3a). No paid plan, no paid API, no purchased domain.
 
 ### Platforms
 
 - **Google (build it):** Google Sheets, Google Forms, Google Apps Script, Gmail (send only).
 - **Microsoft (design only, Phase 5):** a written design for Excel Online, Power Automate, and Outlook, with an optional small prototype.
-- **Hosting:** Vercel. Expo is not used because mobile apps are out of scope (see `docs/decisions/0001-vercel-not-expo.md`).
+- **Hosting:** Vercel Hobby (free). Expo is not used because mobile apps are out of scope (see `docs/decisions/0001-vercel-not-expo.md`).
 
 ---
 
@@ -60,16 +61,44 @@ Interview answers are **untrusted input**. They could contain text that tries to
 | Part | Choice | Notes |
 |---|---|---|
 | Monorepo | pnpm workspaces | Needs approval (new tool) |
-| Web app | Next.js (App Router) + TypeScript | Host on Vercel |
+| Web app | Next.js (App Router) + TypeScript | Host on Vercel Hobby (free), on the free `*.vercel.app` address |
 | Styling | Tailwind CSS | Keep the UI simple and readable. Target WCAG 2.1 AA. |
 | Schema validation | Zod | One schema shared by the AI step, the web app, and the engine |
-| AI | Anthropic API via the official TypeScript SDK | Tool use / structured output so the reply is JSON. Model name comes from `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`; confirm in Spike 6). |
+| AI planner | A provider interface with three modes: **replay** (default, free), **bring-your-own-key** (visitor pastes their own key), and **live** (off) | See section 3a. Anthropic TypeScript SDK is used only by the bring-your-own-key and live modes. Tool use / structured output so the reply is JSON. |
 | Google sign-in and API access | Google OAuth 2.0, Drive API, Sheets API | Narrowest scopes that work (decided in Phase 0) |
 | Engine inside the user's sheet | Google Apps Script | Managed locally with `clasp` |
 | Engine bundling | esbuild | Needs approval. Bundles `engine-logic` and the plan validator into one Apps Script file, because `clasp` does not bundle imports. |
 | Tests | Vitest for TypeScript; pure engine logic also tested in Node | |
-| Database | **Supabase (new dedicated project), anonymous metrics only** | See below |
-| Abuse protection | Vercel BotID, input length caps, per-visitor rate limit, Anthropic spend cap | Protects the paid AI endpoint |
+| Database | **Supabase Free plan (new dedicated project), anonymous metrics only** | See below. The app must work when Supabase is paused or unreachable. |
+| Abuse protection | Input length caps and a per-visitor rate limit | There is no paid endpoint to protect in the default mode |
+
+### 3a. The zero-cost rule
+
+This is a portfolio project, not a product. **Nothing in it may cost money.** The rule applies to the build and to the running site.
+
+| Part | How it stays free |
+|---|---|
+| Hosting | Vercel Hobby plan, `*.vercel.app` address. No custom domain is bought. |
+| Database | Supabase Free plan only. If a free project cannot be created, metrics fall back to a local file written during Aaron's own runs, and nothing else changes. Free projects can pause after a period of inactivity, so the app treats metrics as optional and keeps working without them. |
+| Google | A Google Cloud project **with no billing account linked**. The Drive, Sheets, Forms, and Apps Script features used here have no charge for this volume. |
+| AI | **Replay mode is the default** (below). The paid API is never needed to run, test, or demo the app. |
+| Domain, email, SMS, monitoring | None are purchased. Reminder emails go through the owner's own Gmail quota. |
+| Agent team | The OMC run uses Aaron's existing Claude Code plan. It cannot be made free, so it is capped by `OMC_RUN_BUDGET_TOKENS` (section 9a). The team reports usage at each gate. |
+
+**AI modes.**
+
+1. **Replay (default, $0).** The interview offers the sample personas (career center, nonprofit donors, volunteer coordinator, and so on). The visitor picks one and watches the interview fill in, the plan appear, validation run, and the preview open for editing. The plans are recorded outputs saved in `evals/recordings/`. Editing the preview, validation, the plain-English summary, and download all work live, with no AI call.
+2. **Bring your own key (optional, $0 to Aaron).** A visitor who wants to try their own answers can paste their own API key. It stays in the browser's memory for that session, is sent only with the request, and is never stored or logged. Aaron pays nothing.
+3. **Live (off).** A server-side key would spend Aaron's money, so this mode is **not part of the plan**. It exists as a setting only so the code path is tested. If Aaron decides to add a key someday, that is a scope decision (section 9b, item E), not something the team does.
+
+**Recorded plans are honest.** The team makes the recordings by running the planner prompt and schema through Claude Code subagents, not through the paid API. Every recording and every eval table is labeled with how it was produced, and the case study says so. Eval numbers describe the planner prompt and schema; they are not claimed to be API measurements.
+
+**Cost guard (checked at every gate).**
+
+- The test suite and the production build must pass with **no** `ANTHROPIC_API_KEY` set.
+- No code path reads a server-side AI key unless live mode is switched on explicitly.
+- No billing account is linked to Google Cloud, Supabase and Vercel are on free plans, and no paid add-on is enabled. The team checks what it can see (for example the Supabase cost check, the Vercel plan) and lists the rest for Aaron to confirm at H0.
+- Any step that could incur a charge is a human-only item, and its default answer is "skip".
 
 ### What Supabase stores (and what it never stores)
 
@@ -184,7 +213,7 @@ Input limits: each free-text answer is capped (for example 500 characters) and t
 
 Demo mode lets anyone try the wizard **without signing into Google**:
 
-- The full interview, AI plan, validation, and editable preview all work.
+- The full interview, plan, validation, and editable preview all work, using replay mode by default (section 3a). Bring-your-own-key mode lets a visitor try their own answers.
 - The final step shows a **view-only sample sheet** (published by Aaron, built from the sample plan) and a link to a short recorded walkthrough of the Activate and reminder steps.
 - Demo mode is the default path for hiring managers. The real Google build is the path for Aaron and his test users.
 
@@ -197,11 +226,11 @@ Each persona file has two parts:
 - `answers`: the interview answers.
 - `expected`: the features the user actually asked for (for example `log_count`, `has_routing`, `has_weekly_digest`, `alert_on_contributor_entry`, `must_refuse: ["whatsapp"]`).
 
-An eval script runs every persona through the planner and reports:
+An eval script runs every persona through the planner and reports (recordings are labeled with how they were produced, per section 3a):
 
 - How many plans pass validation on the first try and after one retry.
 - Any plan that exceeds limits, or differs from `expected` (missing or invented features). This is an automatic diff, not a judgment call.
-- Cost and time per run.
+- Time per run. Cost is $0 by design; token counts are recorded where the run provides them.
 
 Target: 10 of 10 valid after one retry, and zero invented features. Save results to `evals/results.md`.
 
@@ -274,7 +303,7 @@ Small experiments, not product code. Record each result in `SPIKES.md` as: quest
 3. **Permission prompt.** What does the Google prompt look like for an unverified app in testing mode, and how many test users are allowed? Does the prompt differ for the contributor-via-Form path?
 4. **Submitter identity.** Can the engine reliably identify who submitted an entry in a personal Gmail account versus a Workspace account (Form collected email, `Session.getActiveUser()`)? If not, use a required "Your name" question as the fallback.
 5. **Email limits.** Current daily sending limits for personal and Workspace accounts, for `MailApp`.
-6. **AI model.** Confirm the current Anthropic model name and structured output approach in the docs.
+6. **AI planner approach.** Confirm the structured output approach in the docs. No paid call is made in this spike.
 7. **Scopes.** Confirm the exact minimal `oauthScopes` list the engine needs (no restricted scopes).
 
 Also in Phase 0: draft `docs/requirements.md` (problem, users, goals, non-goals) and the first decision records in `docs/decisions/`.
@@ -313,7 +342,7 @@ Acceptance: from a pasted plan, the engine builds the tabs, the Form and sidebar
 
 ### Phase 3: Interview and AI planner
 
-1. Build the interview screens from section 5, including the abuse controls (length caps, BotID, rate limit).
+1. Build the interview screens from section 5, including the input length caps and rate limit, and the three AI modes in section 3a.
 2. Call the AI with the answers and the schema; validate; retry once with the error list; show the preview from `plainEnglishSummary`.
 3. Let the user edit fields, options, and reminders in the preview before approving.
 4. Let the user download the plan as JSON.
@@ -321,7 +350,7 @@ Acceptance: from a pasted plan, the engine builds the tabs, the Form and sidebar
 6. Record anonymous funnel events to Supabase (section 3).
 7. Build and run the eval set.
 
-Acceptance: eval targets met; the API key and Supabase service key are server-side only; no interview answers are stored after the session ends; the metrics tables contain no personal data (verify with a query).
+Acceptance: eval targets met on recorded plans; the app builds, runs, and passes its tests with no AI key set; a bring-your-own-key key is never stored or logged (verify by test); the Supabase service key is server-side only and the app still works with Supabase unreachable; no interview answers are stored after the session ends; the metrics tables contain no personal data (verify with a query).
 
 ### Phase 4: Google build step
 
@@ -368,7 +397,7 @@ Write in plain language, aimed at a hiring manager who will skim. No em dashes i
 - **Secrets** go in `.env.local`, which must be in `.gitignore`. Provide `.env.example` with placeholder values.
 - **Tests first** for the schema and engine logic.
 - **Small commits** with clear messages, one task per commit where practical.
-- **Dependencies, schema changes, and migrations.** The dependencies in section 3 are pre-approved when Aaron approves this plan (pnpm, esbuild, clasp, Vercel BotID, and the packages the web app needs). Any other dependency needs a decision record and a critic agent sign-off. A schema change after Phase 1 needs a decision record, a critic sign-off, and updated tests. Database migrations may be applied only to the LogWizard Supabase project, never to any other project.
+- **Dependencies, schema changes, and migrations.** The dependencies in section 3 are pre-approved when Aaron approves this plan (pnpm, esbuild, clasp, and the free packages the web app needs). Any other dependency needs a decision record and a critic agent sign-off, and must be free to use. A schema change after Phase 1 needs a decision record, a critic sign-off, and updated tests. Database migrations may be applied only to the LogWizard Supabase project, never to any other project.
 - **Scope changes go to Aaron.** Anything that changes what the product does or promises (a new platform, new data stored server-side, a new feature class) is a human item (section 9b, item E). The team records the question, keeps working on everything else, and does not guess.
 - **At every GATE** write the gate report to `docs/gates/GATE-N.md`: what was done, what was verified, what is uncertain, and what needs Aaron.
 - **Explain in plain language.** Aaron is technical but switching fields; define jargon the first time it appears in any report.
@@ -418,10 +447,10 @@ Where files do not overlap, workers run in parallel. For example `scout` and `sc
 **Autonomy limits (stop conditions).**
 
 - Fix loop: at most 5 exec, verify, fix cycles per phase. If the same error appears 3 times, stop that phase, record the root cause in the gate report, and move on to any phase that does not depend on it.
-- Budget: set `OMC_RUN_BUDGET_TOKENS` before launch. At 90% the team finishes the current phase; at 100% it stops with state saved, and a relaunch resumes.
+- Budget: set `OMC_RUN_BUDGET_TOKENS` before launch, since the agent run is the one cost that cannot be zero. At 90% the team finishes the current phase; at 100% it stops with state saved, and a relaunch resumes.
 - Unknowns: when a decision belongs to Aaron, the team records it in `docs/OPEN_ITEMS.md` with the assumption it is working under, keeps going on unblocked work, and leads its final report with the open items.
 - The team never works around a human-only step (section 9b) and never asks for or handles passwords, API keys, or tokens. Secrets go into `.env.local` and Vercel environment settings, entered by Aaron.
-- The team never pushes to a remote, deploys to production, or changes billing settings without a human step. Deploys to Vercel preview URLs are allowed after H1.
+- The team never enables a paid plan, links a billing account, buys anything, or turns on a paid API. Any step that could cost money is a human-only item and defaults to "skip". The team never pushes to a remote or deploys to production without a human step. Deploys to Vercel preview URLs on the free plan are allowed after H1.
 
 **OMC tools by phase.**
 
@@ -435,12 +464,12 @@ Where files do not overlap, workers run in parallel. For example `scout` and `sc
 
 ### 9b. Human-only steps
 
-These cannot be done by an agent. Each one involves an account, a password, a Google permission prompt, or money. The team batches them into three short sessions so Aaron is interrupted as little as possible. Agents prepare everything before each session and check the results after it.
+These cannot be done by an agent. Each one involves an account, a password, or a Google permission prompt. Nothing here involves spending money. The team batches them into three short sessions so Aaron is interrupted as little as possible. Agents prepare everything before each session and check the results after it.
 
 | Step | When | What Aaron does | What the team prepares or checks |
 |---|---|---|---|
 | **H0: Accounts and keys** (about 30 minutes, once) | Before launch | Items A to D below | Provides exact click-by-click instructions in `docs/setup-guide.md`. Verifies each setting afterward by running a check script that never prints secret values. |
-| **H1: Approve the plan** (about 5 minutes) | Before launch | Approve this plan. That approves the pre-approved dependencies and permits creating the LogWizard Supabase project and Vercel project. The team checks the Supabase cost and confirms it is free before creating anything. | Setup worker installs pnpm, esbuild, clasp, and creates the two projects. |
+| **H1: Approve the plan** (about 5 minutes) | Before launch | Approve this plan. That approves the pre-approved dependencies and permits creating the LogWizard Supabase project and Vercel project. The team checks the Supabase cost and creates the project only if it is on the Free plan. | Setup worker installs pnpm, esbuild, clasp, and creates the two projects. |
 | **H2: Google hands-on** (about 15 to 20 minutes) | After Phases 1 to 2 are built and the template exists | In the test Google account: click the "Make a copy" link, then Activate, and click Allow on Google's permission prompt. Submit one test Form entry. | Runs Spikes 1 to 4 as a numbered script of what to click, with expected results. Collects the output and writes `SPIKES.md` and the GATE 2 report. |
 | **H3: Final timed run** (about 20 minutes) | After Phases 3 to 4 | Run the full flow from the interview to a reminder email, with a timer. | Sets up the run sheet and a one-page checklist. Records the time and step counts for `docs/case-study.md`. |
 
@@ -448,7 +477,7 @@ The human items:
 
 - **A. Policy and ownership.** Confirm the employer outside-work and intellectual property policy allows this personal project. Pick the final name.
 - **B. Google.** Create a free Google Cloud project and an OAuth consent screen (testing mode). Create a separate test Google account (not a work account). Enable the Apps Script API in that account's settings.
-- **C. Keys and limits.** Create an Anthropic API key and set a monthly spending limit. Put keys in `.env.local` and in Vercel environment settings.
+- **C. Keys.** No paid key is needed. Put the Google OAuth client ID and secret and the Supabase service key in `.env.local` and in Vercel environment settings. Confirm that Google Cloud has no billing account linked and that Vercel shows the Hobby plan.
 - **D. Repository.** Create the GitHub repository and connect Vercel to it. The team does not push; Aaron pushes or approves the first push.
 - **E. Scope decisions.** Answer entries in `docs/OPEN_ITEMS.md` when the team reaches the end of its unblocked work.
 
@@ -463,9 +492,9 @@ Agents handle the items marked (team). Aaron handles the rest (see 9b).
 - [ ] Confirm the employer outside-work and intellectual property policy allows this personal project. (Aaron, A)
 - [ ] Create a free Google Cloud project and an OAuth consent screen in testing mode. (Aaron, B)
 - [ ] Create a separate test Google account, not a work account, and enable the Apps Script API in its settings. (Aaron, B)
-- [ ] Get an Anthropic API key and set a monthly spending limit. (Aaron, C)
+- [ ] Confirm no billing account is linked in Google Cloud, Vercel is on Hobby, and Supabase is on Free. (Aaron, C)
 - [ ] Create a GitHub repository and connect Vercel to it. (Aaron, D)
-- [ ] Create a new Supabase project for LogWizard, separate from the existing "Development" project. (team, after H1; checks cost first)
+- [ ] Create a new Supabase project for LogWizard, separate from the existing "Development" project. (team, after H1; only on the Free plan)
 - [ ] Install pnpm, esbuild, and `clasp`. (team, after H1)
 - [ ] Draft the privacy page from `docs/privacy.md` and host it on the Vercel preview URL so it can be used as the OAuth consent screen link. (team; Aaron pastes the URL into the consent screen)
 - [ ] Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `OMC_RUN_BUDGET_TOKENS`. (Aaron, section 9a launch sequence)
@@ -475,7 +504,7 @@ Agents handle the items marked (team). Aaron handles the rest (see 9b).
 
 ## 11. Out of scope for this version
 
-Payments, multiple organizations, any stored copy of users' plans, answers, or interaction records, SMS or chat app notifications, AI-generated code, mobile apps (including Expo), and a working Microsoft build (design only unless approved). The only data kept server-side is the anonymous metrics described in section 3.
+Payments, multiple organizations, any stored copy of users' plans, answers, or interaction records, SMS or chat app notifications, AI-generated code, mobile apps (including Expo), and a working Microsoft build (design only unless approved). Anything that costs money: paid plans, paid APIs, purchased domains, or a server-side AI key. The only data kept server-side is the anonymous metrics described in section 3.
 
 ---
 
@@ -485,7 +514,8 @@ Payments, multiple organizations, any stored copy of users' plans, answers, or i
 |---|---|---|---|
 | `drive.file` cannot copy the template | Medium | Phase 4 design changes | Spike 1 tests three methods before any build work |
 | Contributors blocked by unverified app warning | High if unaddressed | Poor user experience | Contributors use the Form, which needs no approval |
-| AI cost or abuse | Medium | Unexpected bill | Length caps, rate limit, BotID, spend cap |
+| Any step quietly costs money | Low | Breaks the $0 rule | Replay mode by default, no server-side AI key, cost guard at every gate, free plans only |
+| Supabase free project pauses | Medium | Metrics stop | App works without metrics; the demo does not depend on the database |
 | Plan has a wrong time zone or hour | Medium | Reminders at the wrong time | `time_zone` in schema, DST tests, preview shows the time in words |
 | Email limit hit | Low | Missed reminders | Batching, send counter, `Activity` warning |
 | Hiring manager cannot try the app | High if unaddressed | Portfolio loses impact | Demo mode, recorded walkthrough |

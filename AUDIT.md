@@ -27,7 +27,7 @@ Nothing has been built yet. Items marked "verify in Phase 0" are informed expect
 | 2 | Each copied sheet holds a brand new script project. Every contributor who opens the sidebar would have to approve it and would see Google's "unverified app" warning. That is a bad experience for non-technical users. | Contributors add entries through a **Google Form** that the engine generates from the plan. The form-submit trigger runs as the owner, so contributors never approve anything. The sidebar stays available to the owner. | 6 |
 | 3 | Hiring managers, the main audience, will not sign into an unverified Google app. Testing mode also caps the app at 100 test users. | Add a **Demo mode**: interview, AI plan, and preview, then a view-only sample sheet and a short recorded walkthrough. No Google sign-in needed. | 5, Phase 3 |
 | 4 | Question 10 asks for a time zone, but the schema has no place to store it. Reminders would fire at the wrong hour. | Add `time_zone` (IANA name, e.g. `America/Chicago`). The engine sets the sheet's time zone from it. Tests cover daylight saving changes. | 4, 6 |
-| 5 | The AI endpoint is public and paid, and nothing stops abuse or runaway cost. | Answer length caps, per-visitor rate limits (Supabase counter table), Vercel BotID, and an Anthropic spend cap. Interview answers are treated as untrusted text. | 3, Phase 3 |
+| 5 | The AI endpoint is public and paid, and nothing stops abuse or runaway cost. | Revision 4 removes the paid endpoint: replay mode is the default, visitors can bring their own key, and there is no server-side AI key. Input caps and a rate limit remain. Interview answers are treated as untrusted text. | 3, 3a, Phase 3 |
 | 6 | Apps Script cannot import TypeScript packages, and `clasp` does not bundle code. As written, the shared `engine-logic` package would never reach the template. | Add **esbuild** (needs approval) to bundle `engine-logic` and the plan validator into one Apps Script file. The engine re-checks `_plan` at Activate with the same validator the web app uses. | 3, 6, 7 |
 
 ### Medium
@@ -52,6 +52,7 @@ Nothing has been built yet. Items marked "verify in Phase 0" are informed expect
 
 ## Also added
 
+- **Revision 4:** a zero-cost rule (section 3a). Replay mode, free plans only, no billing accounts, a cost guard at every gate. Vercel BotID and the Anthropic spend cap were dropped because there is no paid endpoint left to protect.
 - **Revision 3:** the plan now runs as an autonomous multi-agent OMC team (section 9a), with automated gates, stop conditions, and a short list of human-only steps (section 9b) for accounts, keys, and Google permission prompts.
 - Phase-by-phase **oh-my-claudecode** workflow (section 9a).
 - A short **risk register** (section 12).
