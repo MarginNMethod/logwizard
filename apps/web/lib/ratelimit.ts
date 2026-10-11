@@ -59,7 +59,7 @@ function supabaseCounter(env: Env): RemoteCounter | null {
 
 export function counterFromClient(sb: RpcClient): RemoteCounter {
   return {
-    // One atomic statement in Postgres. See supabase-rpc-proposal.sql for the function.
+    // One atomic statement in Postgres. See supabase/migrations/20261011000200_increment_rate_limit.sql for the function.
     async increment(keyHash, windowStartIso) {
       const { data, error } = await sb.rpc("increment_rate_limit", { p_key_hash: keyHash, p_window_start: windowStartIso });
       if (error) throw new Error("rpc failed");
