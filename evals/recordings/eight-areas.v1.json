@@ -1,0 +1,208 @@
+{
+  "persona_id": "eight-areas",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-11",
+  "planner_prompt_version": "v1",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Industry Partner Log",
+      "time_zone": "America/Chicago",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Alex Kim",
+          "email": "alex.kim@example.com",
+          "role": "contributor"
+        },
+        {
+          "name": "Casey Nguyen",
+          "email": "casey.nguyen@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Industry Partner Log",
+          "fields": [
+            {
+              "key": "company",
+              "label": "Company",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "contact_name",
+              "label": "Contact name",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "contact_email",
+              "label": "Contact email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "interaction_type",
+              "label": "Interaction type",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Email",
+                "Call",
+                "Meeting",
+                "Event",
+                "Other"
+              ]
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "industry",
+              "label": "Industry",
+              "type": "multi_choice",
+              "required": false,
+              "options": [
+                "Healthcare",
+                "Technology",
+                "Finance",
+                "Education",
+                "Manufacturing",
+                "Retail",
+                "Government",
+                "Nonprofit"
+              ]
+            },
+            {
+              "key": "follow_up_date",
+              "label": "Follow-up date",
+              "type": "date",
+              "required": false
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        },
+        {
+          "id": "healthcare",
+          "name": "Healthcare Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "technology",
+          "name": "Technology Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "finance",
+          "name": "Finance Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "education",
+          "name": "Education Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "manufacturing",
+          "name": "Manufacturing Log",
+          "copy_fields_from": "main"
+        }
+      ],
+      "routing_rules": [
+        {
+          "from": "main",
+          "when": {
+            "field": "industry",
+            "includes": "Healthcare"
+          },
+          "copy_to": "healthcare"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "industry",
+            "includes": "Technology"
+          },
+          "copy_to": "technology"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "industry",
+            "includes": "Finance"
+          },
+          "copy_to": "finance"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "industry",
+            "includes": "Education"
+          },
+          "copy_to": "education"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "industry",
+            "includes": "Manufacturing"
+          },
+          "copy_to": "manufacturing"
+        }
+      ],
+      "reminders": [
+        {
+          "type": "follow_up_due",
+          "log": "main",
+          "date_field": "follow_up_date",
+          "days_before": 1,
+          "notify": [
+            "owner"
+          ],
+          "send_hour": 8
+        },
+        {
+          "type": "weekly_digest",
+          "day": "THU",
+          "send_hour": 8,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ]
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": [
+      "Retail, Government and Nonprofit have no separate logs because of the log limit of 6; they remain options on the Industry field."
+    ]
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Planned by the same Claude Code worker context that ran the commands, using only planner-prompt.md and the persona answers (expected block not read); not a separate fresh subagent. Model: Claude Sonnet 5.5."
+}

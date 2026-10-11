@@ -1,0 +1,196 @@
+{
+  "persona_id": "forty-fields",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-11",
+  "planner_prompt_version": "v1",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Vendor Master Log",
+      "time_zone": "America/New_York",
+      "owner": {
+        "name": "Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Vendor Master Log",
+          "fields": [
+            {
+              "key": "vendor_name",
+              "label": "Vendor name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "contact",
+              "label": "Contact",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "email",
+              "label": "Email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "phone",
+              "label": "Phone",
+              "type": "phone",
+              "required": false
+            },
+            {
+              "key": "fax",
+              "label": "Fax",
+              "type": "phone",
+              "required": false
+            },
+            {
+              "key": "address",
+              "label": "Address",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "city",
+              "label": "City",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "state",
+              "label": "State",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "zip",
+              "label": "Zip",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "country",
+              "label": "Country",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "website",
+              "label": "Website",
+              "type": "url",
+              "required": false
+            },
+            {
+              "key": "category",
+              "label": "Category",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Goods",
+                "Services",
+                "Software",
+                "Logistics",
+                "Other"
+              ]
+            },
+            {
+              "key": "rating",
+              "label": "Rating",
+              "type": "number",
+              "required": false
+            },
+            {
+              "key": "contract_start",
+              "label": "Contract start",
+              "type": "date",
+              "required": false
+            },
+            {
+              "key": "contract_end",
+              "label": "Contract end",
+              "type": "date",
+              "required": false
+            },
+            {
+              "key": "terms",
+              "label": "Terms",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "insurance",
+              "label": "Insurance",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "tax_id",
+              "label": "Tax ID",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "bank",
+              "label": "Bank",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "account_rep",
+              "label": "Account rep",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "rep_phone",
+              "label": "Rep phone",
+              "type": "phone",
+              "required": false
+            },
+            {
+              "key": "rep_email",
+              "label": "Rep email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "lead_time",
+              "label": "Lead time",
+              "type": "number",
+              "required": false
+            },
+            {
+              "key": "min_order",
+              "label": "Min order",
+              "type": "number",
+              "required": false
+            },
+            {
+              "key": "discount",
+              "label": "Discount",
+              "type": "number",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [],
+      "alerts": []
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": [
+      "15 fields omitted because of the 25 field limit: Region, Certs, Audit date, Audit score, Risk, Notes, Last PO, Last invoice, Open balance, Currency, Payment method, Ship method, Return policy, Status, Owner"
+    ]
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Planned by the same subagent context that read the prompt (not a separate fresh planner subagent), as instructed by the lead. Model: Claude Sonnet."
+}

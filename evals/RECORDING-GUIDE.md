@@ -90,3 +90,10 @@ Run every command from `evals/`.
 - No network calls, no paid API, no API key.
 - Do not describe these results as API measurements.
 - Do not commit.
+
+
+## Practical notes from the first recording run
+
+- Run the runner with stdin closed, or it can hang: `cd evals && node --import ./src/register.mjs src/run.ts --no-write </dev/null | cat`. Several runs at once make `pnpm run run` very slow.
+- Isolation caveat: in the first run (2026-10-11) the recording workers planned inline, in the same context that read this guide. They saw only the prompt and the persona `answers`, never `expected`, but the planner was not a separate fresh subagent. Each recording says so in `notes`. A stricter run would use one fresh subagent per persona that is given only the prompt and the answers JSON.
+- The word "subagent" in `produced_by` is therefore a loose fit for the first run. Do not change the sentence (the runner checks it); explain the difference in `notes` and in the results.

@@ -1,0 +1,100 @@
+{
+  "persona_id": "sms-whatsapp",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-11",
+  "planner_prompt_version": "v1",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Salon Client Notes",
+      "time_zone": "America/Phoenix",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Mia Torres",
+          "email": "mia.torres@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Salon Client Notes",
+          "fields": [
+            {
+              "key": "client_name",
+              "label": "Client name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "phone",
+              "label": "Phone",
+              "type": "phone",
+              "required": false
+            },
+            {
+              "key": "service",
+              "label": "Service",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            },
+            {
+              "key": "preferred_stylist",
+              "label": "Preferred stylist",
+              "type": "text",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [
+        {
+          "type": "weekly_digest",
+          "day": "MON",
+          "send_hour": 9,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ]
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": [
+      "WhatsApp messages are not supported; the new-entry alert is sent by email to the owner.",
+      "SMS reminders to clients are not supported, and clients are not people in the plan.",
+      "The weekly digest cannot be sent to WhatsApp; it is emailed to the owner."
+    ]
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Planned by the same Claude Code worker context that ran the commands, using only planner-prompt.md and the persona answers (expected block not read); not a separate fresh subagent. Model: Claude Sonnet 5.5."
+}

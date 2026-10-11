@@ -1,0 +1,121 @@
+{
+  "persona_id": "nonprofit-donors",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-11",
+  "planner_prompt_version": "v1",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Riverbend Donor Touchpoints",
+      "time_zone": "America/New_York",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Jordan Lee",
+          "email": "jordan.lee@example.com",
+          "role": "contributor"
+        },
+        {
+          "name": "Priya Shah",
+          "email": "priya.shah@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Riverbend Donor Touchpoints",
+          "fields": [
+            {
+              "key": "donor_name",
+              "label": "Donor name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "email",
+              "label": "Email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "phone",
+              "label": "Phone",
+              "type": "phone",
+              "required": false
+            },
+            {
+              "key": "contact_type",
+              "label": "Type of contact",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Thank-you call",
+                "Letter",
+                "Event",
+                "Ask"
+              ]
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "gift_amount",
+              "label": "Gift amount",
+              "type": "number",
+              "required": false
+            },
+            {
+              "key": "next_step_date",
+              "label": "Next step date",
+              "type": "date",
+              "required": false
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [
+        {
+          "type": "follow_up_due",
+          "log": "main",
+          "date_field": "next_step_date",
+          "days_before": 3,
+          "notify": [
+            "owner"
+          ],
+          "send_hour": 8
+        },
+        {
+          "type": "weekly_digest",
+          "day": "FRI",
+          "send_hour": 16,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": []
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Plan produced by the recording worker itself in one context from planner-prompt.md and the persona answers only, not by a separate fresh subagent, at the lead's instruction. Model: Claude Sonnet 5.5."
+}
