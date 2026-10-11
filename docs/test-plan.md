@@ -53,7 +53,7 @@ Notes:
 | Check | Result |
 |---|---|
 | `pnpm install --frozen-lockfile` | Already up to date. Lockfile unchanged. |
-| `pnpm --filter @logwizard/apps-script build` | Built `dist/Code.js` (212.1 KB, zod bundled), 5 OAuth scopes, `check.mjs` passed. `dist/` is git-ignored. |
+| `pnpm --filter @logwizard/apps-script build` | Built `dist/Code.js` (227.8 KB, zod bundled), 5 OAuth scopes, `check.mjs` passed. `dist/` is git-ignored. |
 | `pnpm --filter @logwizard/web dev` with no `.env.local` | `/` returns 200, `/start` returns 200, `/privacy` returns 200. |
 | `POST /api/plan` with the sample persona `career-center` answers | `ok: true`, `mode: replay`, `validation_result: pass`, `retry_count: 0`. Four logs in the plan. |
 

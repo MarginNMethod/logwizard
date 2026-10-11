@@ -2,7 +2,7 @@
 
 Status: updated 2026-10-11. Each requirement in `docs/requirements.md` is linked to the user stories in `docs/user-stories.md` that cover it, and to the test that proves it.
 
-The **Test** column names the real test file or check that covers the requirement. It is **TBD** where no test exists. The **Status** column says what the test shows and what it does not. Tests run with `CI=1 pnpm -r test` (389 tests across five packages on 2026-10-11, see `docs/test-plan.md`).
+The **Test** column names the real test file or check that covers the requirement. It is **TBD** where no test exists. The **Status** column says what the test shows and what it does not. Tests run with `CI=1 pnpm -r test` (441 tests across five packages on 2026-10-11, see `docs/test-plan.md`).
 
 How to read this table:
 
