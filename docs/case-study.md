@@ -37,14 +37,14 @@ Do not replace the placeholders with an estimate. If the hand-built time cannot 
 |---|---|
 | Plan schema and validator | Built. 201 tests in `packages/plan-schema` pass (`test/plan.test.ts` and `test/hardening.test.ts`). |
 | Engine logic (routing, reminders, digests, sends, alerts) | Built. 85 tests in `packages/engine-logic` pass. |
-| Apps Script engine | Built and bundled. 26 tests in `apps-script` pass with fake services. The bundle is 212.1 KB with zod included, and it requests 5 OAuth scopes. The build check passed. |
-| Web app (interview, preview, Demo mode) | Built. 40 tests in `apps/web` pass. Replay mode works with no environment variables. |
+| Apps Script engine | Built and bundled. 52 tests in `apps-script` pass with fake services. The bundle is 227.8 KB with zod included, and it requests 5 OAuth scopes. The build check passed. |
+| Web app (interview, preview, Demo mode) | Built. 66 tests in `apps/web` pass. Replay mode works with no environment variables. |
 | Eval set | 12 personas, 12 recordings, graded by the runner (37 tests in `evals` pass). |
 | Google build step (sign-in, Drive copy, Activate) | Not built. Phase 4. |
 | Google behaviour (Activate, form, permission prompt, submitter identity, email) | Not tested. Spikes 1 to 4 are pending (`SPIKES.md`). |
 | Measured end-to-end time (interview to reminder email) | **TO MEASURE AT H3** |
 
-Total unit tests across the five packages with tests: **389** (from `CI=1 pnpm -r test`, 2026-10-11). Those tests use fake services for Google and recorded plans for the planner. They do not call Google or an AI.
+Total unit tests across the five packages with tests: **441** (from `CI=1 pnpm -r test`, 2026-10-11). Those tests use fake services for Google and recorded plans for the planner. They do not call Google or an AI.
 
 ### The eval, with its caveats
 

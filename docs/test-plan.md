@@ -34,13 +34,11 @@ Counts are from `CI=1 pnpm -r test` run on 2026-10-11 (exit code 0). Each row is
 | `packages/engine-logic` | `test/digest.test.ts` | 11 | Weekly digest day, time zone, grouping, totals |
 | `packages/engine-logic` | `test/alerts.test.ts` | 8 | Who is alerted, and when |
 | `packages/engine-logic` | `test/sends.test.ts` | 9 | Daily caps, 80 percent warning, deferred sends, duplicates |
-| `apps-script` | `test/core.test.ts` | 26 | Activate (idempotent, own triggers only, never overwrites a tab), form submit, sidebar, routing, hourly tick, test reminder, daily cap, failed sends |
-| `apps/web` | `test/planner.test.ts` | 14 | Replay, bring-your-own-key (never logs the key), live mode off by default, one retry |
-| `apps/web` | `test/caps-ratelimit-events.test.ts` | 20 | Input caps, rate limit, funnel event shape, API routes with no environment |
-| `apps/web` | `test/guards.test.ts` | 6 | Repository guards: key use, no em dashes, `example.com` only |
+| `apps-script` | `test/core.test.ts`, `test/fixes.test.ts` | 52 | Activate (idempotent, own triggers only, never overwrites a tab, plan edits), form submit, sidebar, routing, hourly tick with reserve-then-send accounting, lock timeouts, daily cap and alert budget, verified email handling, test reminder |
+| `apps/web` | `test/planner.test.ts`, `test/caps-ratelimit-events.test.ts`, `test/guards.test.ts`, `test/fixes.test.ts` | 66 | Replay and bring-your-own-key planner (key never logged, server credentials ignored), live mode off by default, input caps, rate limit (client address, fail-open), funnel events, security headers, sample personas replay, repository guards |
 | `evals` | `test/diff.test.ts` | 17 | Diff rules between a plan and its `expected` block |
 | `evals` | `test/runner.test.ts` | 20 | Provenance checks, grading, `results.md` content |
-| **Total** | | **389** | |
+| **Total** | | **441** | |
 
 Notes:
 

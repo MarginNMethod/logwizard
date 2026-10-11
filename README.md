@@ -31,7 +31,7 @@ Read this as of 2026-10-11.
 
 **Verified**
 
-- 389 unit tests pass across the five packages with tests (`CI=1 pnpm -r test`, run 2026-10-11).
+- 441 unit tests pass across the five packages with tests (`CI=1 pnpm -r test`, run 2026-10-11).
 - The Apps Script bundle builds, with 5 OAuth scopes, and the build check passes.
 - The web app runs in demo mode with no environment variables. Its pages return 200 and a sample plan validates on the first try.
 - Eval results: 12 of 12 recorded plans valid on the first try, 11 of 12 match the answer key, 10 of 12 are clean on both checks (`evals/results.md`). These are not API measurements.
