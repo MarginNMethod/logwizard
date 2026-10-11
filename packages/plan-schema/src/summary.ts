@@ -1,4 +1,5 @@
 import type { Plan, PlanLog } from "./schema.js";
+import { zoneDisplayName } from "./timezones.js";
 
 const DAY_NAMES: Record<string, string> = {
   MON: "Monday", TUE: "Tuesday", WED: "Wednesday", THU: "Thursday", FRI: "Friday", SAT: "Saturday", SUN: "Sunday",
@@ -12,15 +13,10 @@ function hourWords(h: number): string {
   return `${h12}:00 ${suffix}`;
 }
 
-/** "Central Time (America/Chicago)". Uses the generic zone name so it does not change with daylight saving. */
+/** "Central Time (America/Chicago)". Uses a pinned name table so the text is the same on every runtime. */
 function zoneWords(tz: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longGeneric" }).formatToParts(new Date(0));
-    const name = parts.find((p) => p.type === "timeZoneName")?.value;
-    return name ? `${name} (${tz})` : tz;
-  } catch {
-    return tz;
-  }
+  const name = zoneDisplayName(tz);
+  return name ? `${name} (${tz})` : tz;
 }
 
 function list(items: string[]): string {

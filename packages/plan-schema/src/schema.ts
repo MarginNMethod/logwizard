@@ -1,21 +1,13 @@
 import { z } from "zod";
 import { FIELD_TYPES, LIMITS, WEEKDAYS } from "./limits.js";
-import { emailText, keyText, safeText } from "./text.js";
+import { emailText, keyText, safeText, show } from "./text.js";
+import { TIME_ZONES } from "./timezones.js";
 
 // ---------- time zone ----------
 
-/** True for real IANA names such as "America/Chicago" (exact capitalization) or "UTC". */
+/** True for names on the pinned allowlist: "America/Chicago" (exact capitalization) or "UTC". */
 export function isValidTimeZone(tz: string): boolean {
-  if (tz === "UTC") return true;
-  // Needs a Region/City shape. Rejects offsets like "+01:00" and abbreviations like "CST".
-  if (!/^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)+$/.test(tz)) return false;
-  try {
-    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: tz }).resolvedOptions().timeZone;
-    // Intl accepts any capitalization; the Apps Script engine does not, so require the proper one.
-    return !(resolved.toLowerCase() === tz.toLowerCase() && resolved !== tz);
-  } catch {
-    return false;
-  }
+  return TIME_ZONES.has(tz);
 }
 
 // ---------- people ----------
@@ -59,9 +51,16 @@ const FieldSchema = z
       f.options?.forEach((o, i) => {
         const k = o.toLowerCase();
         if (seen.has(k)) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["options", i], message: `Option "${o}" appears more than once in this field` });
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["options", i], message: `Option "${show(o)}" appears more than once in this field` });
         }
         seen.add(k);
+        if (o.includes(",")) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["options", i],
+            message: `Option "${show(o)}" contains a comma. Options cannot contain commas because several answers are joined with commas. Remove the comma or reword it`,
+          });
+        }
       });
     } else if (f.options !== undefined) {
       ctx.addIssue({
@@ -71,6 +70,8 @@ const FieldSchema = z
       });
     }
   });
+
+const RESERVED_LOG_NAMES = new Set(["_plan", "setup", "activity", "entries", "form responses 1"]);
 
 /**
  * A log is either a "base" log (has its own fields) or a "copy" log
@@ -94,15 +95,28 @@ const LogSchema = z
     if (hasFields === hasCopy) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Log "${log.id}" must have either "fields" (its own columns) or "copy_fields_from" (reuse another log's columns), not both and not neither`,
+        message: `Log "${show(log.id)}" must have either "fields" (its own columns) or "copy_fields_from" (reuse another log's columns), not both and not neither`,
+      });
+    }
+    if (log.name.length <= LIMITS.maxNameLength && (RESERVED_LOG_NAMES.has(log.name.toLowerCase()) || log.name.startsWith("_"))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["name"],
+        message: `Log name "${show(log.name)}" is used by the system. Names that start with an underscore, and the names _plan, Setup, Activity, Entries, and Form Responses 1, cannot be used for a log. Choose another name`,
       });
     }
     const seen = new Set<string>();
+    const labels = new Set<string>();
     log.fields?.forEach((f, i) => {
       if (seen.has(f.key)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fields", i, "key"], message: `Field key "${f.key}" is used twice in log "${log.id}". Keys must be unique within a log` });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fields", i, "key"], message: `Field key "${show(f.key)}" is used twice in log "${show(log.id)}". Keys must be unique within a log` });
       }
       seen.add(f.key);
+      const l = f.label.toLowerCase();
+      if (labels.has(l)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fields", i, "label"], message: `Field label "${show(f.label)}" is used more than once in log "${show(log.id)}". Labels must be unique within a log, ignoring capitals` });
+      }
+      labels.add(l);
     });
   });
 
@@ -174,8 +188,9 @@ const PlanObject = z
     time_zone: z
       .string({ required_error: "time_zone is required", invalid_type_error: "time_zone must be text" })
       .trim()
+      .max(64, "time_zone must be at most 64 characters")
       .refine(isValidTimeZone, (v) => ({
-        message: `time_zone "${v}" is not a valid IANA time zone name. Use a name like "America/Chicago" or "Europe/London" with exact capitalization`,
+        message: `time_zone "${show(v)}" is not a valid IANA time zone name. Use a name like "America/Chicago" or "Europe/London" with exact capitalization`,
       })),
     owner: OwnerSchema,
     contributors: z.array(ContributorSchema).max(LIMITS.maxContributors, `A plan can have at most ${LIMITS.maxContributors} contributors`).default([]),
@@ -189,6 +204,8 @@ const PlanObject = z
   })
   .strict();
 
+/** Object-level schema only. validatePlan runs the cross checks separately, and only after this passes. */
+export const PlanObjectSchema = PlanObject;
 export const PlanSchema = PlanObject.superRefine(crossChecks);
 
 export type Plan = z.infer<typeof PlanObject>;
@@ -197,17 +214,17 @@ export type PlanField = NonNullable<PlanLog["fields"]>[number];
 
 // ---------- rules that look across the whole plan ----------
 
-function crossChecks(plan: Plan, ctx: z.RefinementCtx): void {
+export function crossChecks(plan: Plan, ctx: { addIssue: (i: z.IssueData) => void }): void {
   const issue = (path: (string | number)[], message: string) =>
     ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
 
   const logs = new Map<string, PlanLog>();
   const names = new Set<string>();
   plan.logs.forEach((log, i) => {
-    if (logs.has(log.id)) issue(["logs", i, "id"], `Log id "${log.id}" is used twice. Log ids must be unique`);
+    if (logs.has(log.id)) issue(["logs", i, "id"], `Log id "${show(log.id)}" is used twice. Log ids must be unique`);
     logs.set(log.id, log);
     const n = log.name.toLowerCase();
-    if (names.has(n)) issue(["logs", i, "name"], `Log name "${log.name}" is used twice. Log names must be unique (they become sheet tab names)`);
+    if (names.has(n)) issue(["logs", i, "name"], `Log name "${show(log.name)}" is used twice. Log names must be unique (they become sheet tab names)`);
     names.add(n);
   });
 
@@ -216,11 +233,11 @@ function crossChecks(plan: Plan, ctx: z.RefinementCtx): void {
     const src = log.copy_fields_from;
     if (src === undefined) return;
     const path = ["logs", i, "copy_fields_from"];
-    if (src === log.id) return issue(path, `Log "${log.id}" cannot copy fields from itself`);
+    if (src === log.id) return issue(path, `Log "${show(log.id)}" cannot copy fields from itself`);
     const srcLog = logs.get(src);
-    if (!srcLog) return issue(path, `copy_fields_from "${src}" does not match any log id`);
+    if (!srcLog) return issue(path, `copy_fields_from "${show(src)}" does not match any log id`);
     if (srcLog.copy_fields_from !== undefined) {
-      issue(path, `Log "${log.id}" copies fields from "${src}", but "${src}" itself copies fields from another log. Chains are not allowed: point to a log that has its own fields`);
+      issue(path, `Log "${show(log.id)}" copies fields from "${show(src)}", but "${show(src)}" itself copies fields from another log. Chains are not allowed: point to a log that has its own fields`);
     }
   });
 
@@ -229,25 +246,25 @@ function crossChecks(plan: Plan, ctx: z.RefinementCtx): void {
     const at = (k: string) => ["routing_rules", i, k];
     const from = logs.get(rule.from);
     const to = logs.get(rule.copy_to);
-    if (!from) issue(at("from"), `Routing rule "from" "${rule.from}" does not match any log id`);
-    if (!to) issue(at("copy_to"), `Routing rule "copy_to" "${rule.copy_to}" does not match any log id`);
-    if (rule.from === rule.copy_to) issue(at("copy_to"), `Routing rule cannot send log "${rule.from}" to itself`);
+    if (!from) issue(at("from"), `Routing rule "from" "${show(rule.from)}" does not match any log id`);
+    if (!to) issue(at("copy_to"), `Routing rule "copy_to" "${show(rule.copy_to)}" does not match any log id`);
+    if (rule.from === rule.copy_to) issue(at("copy_to"), `Routing rule cannot send log "${show(rule.from)}" to itself`);
     if (!from || !to || rule.from === rule.copy_to) return;
 
     if (to.copy_fields_from !== rule.from) {
-      issue(at("copy_to"), `Target log "${to.id}" must have copy_fields_from set to "${from.id}" so the copied rows fit its columns`);
+      issue(at("copy_to"), `Target log "${show(to.id)}" must have copy_fields_from set to "${show(from.id)}" so the copied rows fit its columns`);
     }
     if (!from.fields) {
-      issue(at("from"), `Log "${from.id}" has no fields of its own, so it cannot be a routing source. Route from the log it copies fields from`);
+      issue(at("from"), `Log "${show(from.id)}" has no fields of its own, so it cannot be a routing source. Route from the log it copies fields from`);
       return;
     }
     const field = from.fields.find((f) => f.key === rule.when.field);
     if (!field) {
-      issue(["routing_rules", i, "when", "field"], `Field "${rule.when.field}" does not exist in log "${from.id}"`);
+      issue(["routing_rules", i, "when", "field"], `Field "${show(rule.when.field)}" does not exist in log "${show(from.id)}"`);
     } else if (field.type !== "choice" && field.type !== "multi_choice") {
-      issue(["routing_rules", i, "when", "field"], `Field "${field.key}" is type ${field.type}. Routing can only use choice or multi_choice fields`);
+      issue(["routing_rules", i, "when", "field"], `Field "${show(field.key)}" is type ${field.type}. Routing can only use choice or multi_choice fields`);
     } else if (!(field.options ?? []).includes(rule.when.includes)) {
-      issue(["routing_rules", i, "when", "includes"], `"${rule.when.includes}" is not one of the options of field "${field.key}" (options: ${(field.options ?? []).join(", ")})`);
+      issue(["routing_rules", i, "when", "includes"], `"${show(rule.when.includes)}" is not one of the options of field "${show(field.key)}" (the field has ${field.options?.length ?? 0} options)`);
     }
   });
 
@@ -255,36 +272,65 @@ function crossChecks(plan: Plan, ctx: z.RefinementCtx): void {
   plan.reminders.forEach((rem, i) => {
     if (rem.type !== "follow_up_due") return;
     const log = logs.get(rem.log);
-    if (!log) return issue(["reminders", i, "log"], `Reminder log "${rem.log}" does not match any log id`);
+    if (!log) return issue(["reminders", i, "log"], `Reminder log "${show(rem.log)}" does not match any log id`);
     // A copy log has the same columns as the log it copies.
     const fields = log.fields ?? (log.copy_fields_from ? logs.get(log.copy_fields_from)?.fields : undefined) ?? [];
     const field = fields.find((f) => f.key === rem.date_field);
-    if (!field) issue(["reminders", i, "date_field"], `date_field "${rem.date_field}" does not exist in log "${log.id}"`);
-    else if (field.type !== "date") issue(["reminders", i, "date_field"], `date_field "${field.key}" is type ${field.type}, but it must be a date field`);
+    if (!field) issue(["reminders", i, "date_field"], `date_field "${show(rem.date_field)}" does not exist in log "${show(log.id)}"`);
+    else if (field.type !== "date") issue(["reminders", i, "date_field"], `date_field "${show(field.key)}" is type ${field.type}, but it must be a date field`);
   });
 
+  // duplicate routing rules
+  const seenRules = new Map<string, number>();
+  plan.routing_rules.forEach((r, i) => {
+    const key = JSON.stringify([r.from, r.when.field, r.when.includes.toLowerCase(), r.copy_to]);
+    const first = seenRules.get(key);
+    if (first !== undefined) issue(["routing_rules", i], `This routing rule is a duplicate of routing_rules[${first}]. Remove one of them`);
+    else seenRules.set(key, i);
+  });
+
+  // reminders: at most one weekly digest
+  let digestSeen = false;
+  plan.reminders.forEach((r, i) => {
+    if (r.type !== "weekly_digest") return;
+    if (digestSeen) issue(["reminders", i], "A plan can have only one weekly_digest reminder");
+    digestSeen = true;
+  });
+
+  // alerts need someone who can trigger them
+  if (plan.contributors.length === 0) {
+    plan.alerts.forEach((_, i) => issue(["alerts", i], "An alert needs at least one contributor, because it fires when a contributor adds an entry. Add a contributor or remove the alert"));
+  }
+
   // contributors
-  const emails = new Set<string>([plan.owner.email.toLowerCase()]);
+  const ownerEmail = plan.owner.email.toLowerCase();
+  const emails = new Set<string>([ownerEmail]);
   const seenContrib = new Set<string>();
   plan.contributors.forEach((c, i) => {
     const e = c.email.toLowerCase();
-    if (seenContrib.has(e)) issue(["contributors", i, "email"], `Contributor email "${c.email}" is listed twice`);
+    if (e === ownerEmail) issue(["contributors", i, "email"], `Contributor email "${show(c.email)}" is the owner's email. The owner is already in the plan; remove this contributor`);
+    else if (seenContrib.has(e)) issue(["contributors", i, "email"], `Contributor email "${show(c.email)}" is listed twice`);
     seenContrib.add(e);
     emails.add(e);
   });
 
   // notify targets (reminders and alerts)
-  const checkNotify = (list: string[], base: (string | number)[]) =>
+  const checkNotify = (list: string[], base: (string | number)[]) => {
+    const seenTargets = new Set<string>();
     list.forEach((t, j) => {
       const path = [...base, "notify", j];
+      const tk = t.toLowerCase();
+      if (seenTargets.has(tk)) issue(path, `notify lists "${show(t)}" more than once`);
+      seenTargets.add(tk);
       if (t === "owner") return;
       if (t === "contributors") {
         if (plan.contributors.length === 0) issue(path, 'notify includes "contributors" but the plan has no contributors');
         return;
       }
-      if (!t.includes("@")) return issue(path, `notify target "${t}" must be "owner", "contributors", or an email address listed in the plan`);
-      if (!emails.has(t.toLowerCase())) issue(path, `notify email "${t}" is not the owner or a contributor in this plan. Add the person to contributors first`);
+      if (!t.includes("@")) return issue(path, `notify target "${show(t)}" must be "owner", "contributors", or an email address listed in the plan`);
+      if (!emails.has(t.toLowerCase())) issue(path, `notify email "${show(t)}" is not the owner or a contributor in this plan. Add the person to contributors first`);
     });
+  };
   plan.reminders.forEach((r, i) => checkNotify(r.notify, ["reminders", i]));
   plan.alerts.forEach((a, i) => checkNotify(a.notify, ["alerts", i]));
 }

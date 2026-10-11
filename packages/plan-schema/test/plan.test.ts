@@ -145,7 +145,13 @@ describe("validatePlan", () => {
     }));
     p.contributors = Array.from({ length: LIMITS.maxContributors }, (_, i) => ({ name: `Rep ${i}`, email: `rep${i}@example.com`, role: "contributor" }));
     p.alerts = Array.from({ length: LIMITS.maxAlerts }, () => ({ on: "new_entry", when_entered_by: "contributor", notify: ["owner"] }));
-    p.reminders = Array.from({ length: LIMITS.maxReminders }, () => ({ type: "weekly_digest", day: "FRI", send_hour: 23, notify: ["contributors"] }));
+    // Old expectation was the bug: ten weekly digests. Only one digest is allowed now, so use one digest plus nine follow-ups.
+    p.logs[0].fields[0].type = "date";
+    p.reminders = Array.from({ length: LIMITS.maxReminders }, (_, i) =>
+      i === 0
+        ? { type: "weekly_digest", day: "FRI", send_hour: 23, notify: ["contributors"] }
+        : { type: "follow_up_due", log: "log0", date_field: "f0", days_before: 1, notify: ["contributors"], send_hour: 9 },
+    );
     p.system_name = "x".repeat(LIMITS.maxNameLength);
     const r = validatePlan(p);
     expect(r.ok, JSON.stringify(!r.ok && r.errors)).toBe(true);
