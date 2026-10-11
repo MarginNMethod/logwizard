@@ -1,0 +1,16 @@
+{
+  "name": "@logwizard/evals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "run": "node --import ./src/register.mjs src/run.ts",
+    "typecheck": "tsc --noEmit",
+    "validate": "node --import ./src/register.mjs src/validate-reply.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

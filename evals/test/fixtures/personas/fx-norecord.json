@@ -1,0 +1,28 @@
+{
+  "_test_fixture": "TEST FIXTURE: hand-written fake data for unit tests, not a real recording or persona.",
+  "id": "fx-norecord",
+  "title": "Fixture fx-norecord",
+  "browser_time_zone": "America/Chicago",
+  "answers": {
+    "q1_interaction_kinds": "fake"
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "MON",
+    "follow_up_reminder_days": 2,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 1,
+    "time_zone": "America/Chicago",
+    "field_labels_required": [
+      "Name",
+      "Date",
+      "Notes"
+    ],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "TEST FIXTURE: hand-written fake data for unit tests, not a real recording or persona."
+  }
+}

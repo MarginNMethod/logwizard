@@ -27,6 +27,7 @@
     "field_labels_required": ["Client name", "Phone", "Service", "Date", "Notes", "Preferred stylist"],
     "must_refuse": ["whatsapp", "sms"],
     "max_follow_up_questions": 0,
+    "tolerate_follow_up_reminder": true,
     "notes": "Email alert and email digest are supported, so they are kept as email. WhatsApp and SMS are impossible and must be omitted from the plan and listed in unsupported_requests. Client-facing SMS reminders are also unsupported. The plan may still include an owner-facing follow_up_due email reminder only if there is a date field to anchor it; the diff does NOT require one (follow_up_reminder_days null), and also does not penalize it. The plan must contain no phone-based notify targets."
   }
 }

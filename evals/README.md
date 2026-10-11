@@ -20,7 +20,10 @@ evals/
   personas/              synthetic personas, one JSON file each
   recordings/            recorded planner outputs, one JSON file per persona per prompt version
     README.md            recording file format
-  results.md             written by the runner (not created yet)
+  RECORDING-GUIDE.md     step by step for a subagent making one recording
+  src/                   runner (diff.ts, runner.ts, run.ts) and validate-reply.ts helper
+  test/                  unit tests and TEST FIXTURES (fake data, not real recordings)
+  results.md             written by the runner
 ```
 
 ## Personas
@@ -117,6 +120,29 @@ To make a recording (manual, zero cost):
 3. Save its reply as a recording file with the required fields, including `produced_by`.
 4. Validate `raw_plan` with the Phase 1 validator and fill in the `validation` block honestly. If the first try fails, run the retry (the validator errors are sent back) and record both outcomes.
 
-## Runner (later)
+## Runner
 
-The runner comes after Phase 1 and is not written yet. It will, for each persona: load the recording, validate `raw_plan` with `packages/plan-schema`, apply the diff rules above, and write the table to `evals/results.md`, labeled with how the recordings were produced. It makes no network calls and needs no key.
+The runner works on recordings only. For each persona it loads `recordings/<id>.<version>.json` (the version comes from `planner-prompt.md`, or `--version`), checks provenance (`produced_by`, persona id, prompt version), re-runs the real validator from `packages/plan-schema` on `raw_plan` (and on `retry_plan` when the first try failed), then applies the diff rules above to the plan that validated. It writes `evals/results.md`, labeled with how the recordings were produced. It makes no network calls and needs no API key.
+
+Run it from `evals/` (Node 22.15 or newer; it uses native type stripping, no tsx and no extra packages):
+
+```
+pnpm run run                 # grade recordings and write results.md
+pnpm run run --no-write      # print only
+pnpm run run --strict        # exit 1 if any recording is rejected, invalid, or differs
+pnpm run validate reply.json # run the plan validator on one planner reply (used when recording)
+pnpm test                    # unit tests (vitest)
+pnpm run typecheck
+```
+
+Without pnpm: `node --import ./src/register.mjs src/run.ts`.
+
+Statuses: `not recorded` (no file, no number is claimed), `rejected` (bad provenance or malformed file, not graded), `invalid plan` (failed the validator even after the retry), `differs from expected`, `pass`. Counts use recorded personas as the denominator.
+
+Diff notes beyond the rules above:
+
+- Fields beyond `field_labels_required` are listed as informational and not counted as invented, because `expected` does not list every acceptable field.
+- `forbidden` strings are checked in plan strings. Forbidden strings that contain `@` are also checked in `unsupported_requests`.
+- `tolerate_follow_up_reminder` (optional, `sms-whatsapp`) allows, but does not require, a follow-up reminder when `follow_up_reminder_days` is null.
+- Refusal matching ignores case, punctuation, and plural endings ("per-person time zones" matches "Per-person time zone").
+- A recording whose `raw_plan.plan` is null (follow-up questions only) cannot be graded and is reported as invalid. Record the final reply after the scripted answers (see `RECORDING-GUIDE.md`).

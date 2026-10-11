@@ -1,0 +1,167 @@
+{
+  "_test_fixture": "TEST FIXTURE: hand-written fake data for unit tests, not a real recording or persona.",
+  "persona_id": "fx-never-valid",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2000-01-01",
+  "planner_prompt_version": "v1",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Fixture Log",
+      "time_zone": "America/Chicago",
+      "owner": {
+        "name": "Fixture Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Fixture Helper",
+          "email": "helper@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Fixture Log",
+          "fields": [
+            {
+              "key": "name",
+              "label": "Name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [
+        {
+          "type": "follow_up_due",
+          "log": "main",
+          "date_field": "date",
+          "days_before": 2,
+          "notify": [
+            "owner"
+          ],
+          "send_hour": 8
+        },
+        {
+          "type": "weekly_digest",
+          "day": "MON",
+          "send_hour": 8,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "extra_key": true
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  },
+  "validation": {
+    "first_try_pass": false,
+    "retried": true,
+    "retry_pass": false
+  },
+  "notes": "TEST FIXTURE: hand-written fake data for unit tests, not a real recording or persona.",
+  "retry_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Fixture Log",
+      "time_zone": "America/Chicago",
+      "owner": {
+        "name": "Fixture Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Fixture Helper",
+          "email": "helper@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Fixture Log",
+          "fields": [
+            {
+              "key": "name",
+              "label": "Name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [
+        {
+          "type": "follow_up_due",
+          "log": "main",
+          "date_field": "date",
+          "days_before": 2,
+          "notify": [
+            "owner"
+          ],
+          "send_hour": 8
+        },
+        {
+          "type": "weekly_digest",
+          "day": "MON",
+          "send_hour": 8,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "extra_key": true
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  }
+}
