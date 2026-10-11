@@ -3,7 +3,8 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PRODUCED_BY, checkRecordingShape, evaluatePersona, loadPersonas, renderResults, runEval } from "../src/runner.ts";
+import { readFileSync } from "node:fs";
+import { PRODUCED_BY, checkRecordingShape, envelopeErrorsOf, evaluatePersona, loadPersonas, promptVersion, renderResults, runEval } from "../src/runner.ts";
 
 const fx = join(import.meta.dirname, "fixtures");
 const report = runEval({ personasDir: join(fx, "personas"), recordingsDir: join(fx, "recordings"), version: "v1" });
@@ -106,5 +107,61 @@ describe("checkRecordingShape and evaluatePersona", () => {
     writeFileSync(join(dir, "fx-first-try.v1.json"), "{ not json");
     const r = runEval({ personasDir: join(fx, "personas"), recordingsDir: dir, version: "v1" });
     expect(r.results.find((x) => x.persona_id === "fx-first-try")!.status).toBe("rejected");
+  });
+});
+
+describe("reply envelope check", () => {
+  const persona = loadPersonas(join(fx, "personas")).find((p) => p.id === "fx-first-try")!;
+  const base = JSON.parse(readFileSync(join(fx, "recordings", "fx-first-try.v1.json"), "utf8"));
+  const longNote = "x".repeat(150) + " and then some more words to push it past the cap " + "y".repeat(40); // > 200 chars
+  const withNotes = (notes: string[], questions: string[] = []) => ({
+    ...base,
+    raw_plan: { ...base.raw_plan, unsupported_requests: notes, follow_up_questions: questions },
+  });
+
+  it("a fake recording with an over-length note is valid as a plan but fails the envelope check", () => {
+    expect(longNote.length).toBeGreaterThan(200);
+    const r = evaluatePersona(persona, withNotes([longNote]), "v1");
+    expect(r.valid_on).toBe("first_try");
+    expect(r.status).toBe("pass");
+    expect(r.envelope_errors.length).toBe(1);
+    expect(r.envelope_errors[0]).toContain("unsupported_requests");
+  });
+
+  it("a clean recording has no envelope errors, and too many follow-up questions fail", () => {
+    expect(evaluatePersona(persona, base, "v1").envelope_errors).toEqual([]);
+    expect(envelopeErrorsOf({ plan: base.raw_plan.plan, follow_up_questions: ["a", "b", "c"], unsupported_requests: [] }).length).toBeGreaterThan(0);
+  });
+
+  it("plan-level validation errors are not counted as envelope errors", () => {
+    expect(envelopeErrorsOf({ plan: { schema_version: 1 }, follow_up_questions: [], unsupported_requests: [] })).toEqual([]);
+  });
+
+  it("the results table shows the envelope column and a separate envelope failure count", () => {
+    const dir = mkdtempSync(join(tmpdir(), "evals-env-"));
+    writeFileSync(join(dir, "fx-first-try.v1.json"), JSON.stringify(withNotes([longNote])));
+    const rep = runEval({ personasDir: join(fx, "personas"), recordingsDir: dir, version: "v1" });
+    expect(rep.envelope_failures).toBe(1);
+    const md = renderResults(rep);
+    expect(md).toContain("| Envelope |");
+    expect(md).toMatch(/\| fx-first-try \| pass \| first try \| FAIL \|/);
+    expect(md).toContain("## Envelope failures");
+    expect(md).toContain("0 of 1 recorded pass. 1 fail.");
+  });
+});
+
+describe("--version smoke test", () => {
+  it("reports not recorded for every persona when a version has no recordings, without error", () => {
+    const personasDir = join(import.meta.dirname, "..", "personas");
+    const rep = runEval({ personasDir, recordingsDir: join(import.meta.dirname, "..", "recordings"), version: "v2" });
+    expect(rep.total_personas).toBe(12);
+    expect(rep.results.filter((r) => r.status === "not_recorded")).toHaveLength(12);
+    expect(rep.recorded).toBe(0);
+    expect(renderResults(rep)).not.toMatch(/of 0 recorded/);
+  });
+
+  it("the v1 and v2 prompt files carry their own versions", () => {
+    expect(promptVersion(join(import.meta.dirname, "..", "planner-prompt.md"))).toBe("v1");
+    expect(promptVersion(join(import.meta.dirname, "..", "planner-prompt.v2.md"))).toBe("v2");
   });
 });

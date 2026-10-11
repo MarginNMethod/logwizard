@@ -97,3 +97,21 @@ Run every command from `evals/`.
 - Run the runner with stdin closed, or it can hang: `cd evals && node --import ./src/register.mjs src/run.ts --no-write </dev/null | cat`. Several runs at once make `pnpm run run` very slow.
 - Isolation caveat: in the first run (2026-10-11) the recording workers planned inline, in the same context that read this guide. They saw only the prompt and the persona `answers`, never `expected`, but the planner was not a separate fresh subagent. Each recording says so in `notes`. A stricter run would use one fresh subagent per persona that is given only the prompt and the answers JSON.
 - The word "subagent" in `produced_by` is therefore a loose fit for the first run. Do not change the sentence (the runner checks it); explain the difference in `notes` and in the results.
+
+## Making v2 recordings (fresh subagent per persona)
+
+v2 recordings must be made differently from the v1 run: the planner has to be a truly separate agent. Nothing in `evals/` creates them; this needs fresh planner runs on Aaron's Claude Code plan (no paid API).
+
+Inputs: `evals/planner-prompt.v2.md` (its first line says `planner_prompt_version: v2`), and each persona's `answers` and `browser_time_zone`.
+
+For each of the 12 personas, do the following, one persona per subagent:
+
+1. Check `evals/recordings/<id>.v2.json` does not already exist. Never overwrite.
+2. Build the answers JSON exactly as in step 2 above (answers, browser_time_zone, sample owner, `follow_ups_used: 0`, `follow_up_answers: {}`). Do not clean up hostile or odd text.
+3. Start a NEW subagent (Agent tool, a new instance, not a continued one and not an inline role-play). Its entire input is two things and nothing else: the text below the `---` line in `planner-prompt.v2.md` (as its instructions) and the answers JSON (as its message). Do not give it this guide, the README, `expected`, `notes`, `results.md`, the v1 prompt, any recording, or any other persona's data. Do not give it file access to `evals/personas/` if the tool setup allows limiting that. Spawn the 12 subagents so that none sees another's output (parallel or sequential, but never one subagent doing several personas).
+4. Save its reply unmodified, then follow steps 4 to 8 above (validate with `pnpm run validate`, one fresh retry subagent if the first try is invalid, never edit a plan).
+5. In the recording file set `planner_prompt_version` to `v2` and add the field `"isolation": "fresh-subagent"`. Only set it when step 3 was followed exactly. If any step was done inline, set `"isolation": "inline"` instead and say why in `notes`. Never leave it out of a v2 file.
+6. Run `pnpm run run --no-write --version v2` and check the persona line (no `rejected`, no `flag:` lines). The Envelope column must be read too: an envelope FAIL is a result, not something to fix.
+7. When all 12 exist, the lead runs `pnpm run run --version v2` to write `results.md` (this overwrites the v1 results; copy them first if needed, or write a `results-notes.v2.md`).
+
+The `notes` field should say, in plain words: which model the subagent used if known, that it was a fresh subagent given only the v2 prompt text and the answers JSON, and anything odd. No grading opinions.

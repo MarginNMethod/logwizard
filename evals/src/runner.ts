@@ -2,7 +2,7 @@
 // and never reads an API key.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { validatePlan } from "../../packages/plan-schema/src/index.ts";
+import { validatePlan, validatePlannerReply } from "../../packages/plan-schema/src/index.ts";
 import { diffPlan, type DiffIssue, type Persona, type PlannerReply } from "./diff.ts";
 
 export const PRODUCED_BY = "Claude Code subagent run of evals/planner-prompt.md (no paid API call)";
@@ -40,6 +40,8 @@ export type PersonaResult = {
   unrequested_fields: string[];
   flags: string[]; // recording-level problems (validation mismatch, rejected reasons)
   validator_errors: string[];
+  /** Reply-envelope failures (follow_up_questions / unsupported_requests shape and length caps), reported separately from plan validity. */
+  envelope_errors: string[];
   recording_date: string | null;
   duration_ms: number | null;
   tokens: { input: number; output: number } | null;
@@ -54,6 +56,7 @@ export type Report = {
   first_try_valid: number;
   valid_after_retry: number; // first-try valid plus valid on retry
   diff_clean: number;
+  envelope_failures: number; // graded recordings with at least one envelope error
   invented_total: number;
   missing_total: number;
 };
@@ -95,6 +98,17 @@ function errorsOf(plan: unknown): string[] | null {
   return r.ok ? null : r.errors.map((e) => `${e.path}: ${e.message}`);
 }
 
+/**
+ * Envelope check: run validatePlannerReply on a recorded reply and keep only the errors that are not
+ * about the plan itself (plan errors are reported by the plan validator path). Catches over-length notes,
+ * too many follow-up questions, unknown keys, and a null plan with no question.
+ */
+export function envelopeErrorsOf(reply: unknown): string[] {
+  const r = validatePlannerReply(reply);
+  if (r.ok) return [];
+  return r.errors.filter((e) => !e.path.startsWith("plan.")).map((e) => `${e.path}: ${e.message}`);
+}
+
 function blank(persona: Persona): PersonaResult {
   return {
     persona_id: persona.id,
@@ -107,6 +121,7 @@ function blank(persona: Persona): PersonaResult {
     unrequested_fields: [],
     flags: [],
     validator_errors: [],
+    envelope_errors: [],
     recording_date: null,
     duration_ms: null,
     tokens: null,
@@ -125,6 +140,9 @@ export function evaluatePersona(persona: Persona, rec: unknown, version: string)
   res.recording_date = r.date;
   res.duration_ms = typeof r.duration_ms === "number" ? r.duration_ms : null;
   res.tokens = r.tokens ?? null;
+
+  res.envelope_errors = envelopeErrorsOf(r.raw_plan);
+  if (r.retry_plan !== undefined) res.envelope_errors.push(...envelopeErrorsOf(r.retry_plan).map((e) => `retry ${e}`));
 
   // The runner recomputes validation and flags any mismatch with what the file claims.
   const firstErrors = r.raw_plan.plan === null ? ["plan is null (planner asked follow-up questions; the recording has no final plan)"] : errorsOf(r.raw_plan.plan);
@@ -204,6 +222,7 @@ export function runEval(opts: { personasDir: string; recordingsDir: string; vers
     first_try_valid: graded.filter((r) => r.valid_on === "first_try").length,
     valid_after_retry: graded.filter((r) => r.valid_on === "first_try" || r.valid_on === "retry").length,
     diff_clean: graded.filter((r) => r.status === "pass").length,
+    envelope_failures: graded.filter((r) => r.envelope_errors.length > 0).length,
     invented_total: graded.reduce((n, r) => n + r.invented.length, 0),
     missing_total: graded.reduce((n, r) => n + r.missing.length, 0),
   };
@@ -229,6 +248,8 @@ export function renderResults(report: Report): string {
     L.push(`- Valid on first try: ${report.first_try_valid} of ${n} recorded.`);
     L.push(`- Valid after one retry (includes first-try passes): ${report.valid_after_retry} of ${n} recorded.`);
     L.push(`- Matches expected with no diff issues: ${report.diff_clean} of ${n} recorded.`);
+    L.push(`- Reply envelope (notes within the 200 character cap, at most 2 follow-up questions, no extra keys): ${n - report.envelope_failures} of ${n} recorded pass. ${report.envelope_failures} fail. This is checked separately from plan validity, so a recording can be valid and still fail here.`);
+    L.push(`- Clean on both the diff and the envelope: ${report.results.filter((r) => r.status === "pass" && r.envelope_errors.length === 0).length} of ${n} recorded.`);
     L.push(`- Invented features: ${report.invented_total}. Missing features: ${report.missing_total}.`);
     L.push(`- The denominator is recorded personas only (${n}), not all ${report.total_personas}. Target (PLAN.md): all personas valid after one retry and zero invented features, which can be claimed only once every persona has a recording.`);
   }
@@ -237,13 +258,13 @@ export function renderResults(report: Report): string {
   L.push("");
   L.push("## Per persona");
   L.push("");
-  L.push("| Persona | Result | Valid on | Missing | Invented | Notes |");
-  L.push("|---|---|---|---|---|---|");
+  L.push("| Persona | Result | Valid on | Envelope | Missing | Invented | Notes |");
+  L.push("|---|---|---|---|---|---|---|");
   const label: Record<string, string> = { not_recorded: "not recorded", rejected: "rejected", invalid: "invalid plan", diff_fail: "differs from expected", pass: "pass" };
   for (const r of report.results) {
     const validOn = r.valid_on === "first_try" ? "first try" : r.valid_on === "retry" ? "retry" : r.valid_on === "never" ? "never" : "-";
     const notes = [...r.flags, ...r.issues.filter((i) => !["missing", "invented"].includes(i.kind)).map((i) => `${i.kind}: ${i.feature} (${i.detail})`)];
-    L.push(`| ${r.persona_id} | ${label[r.status]} | ${validOn} | ${r.missing.length ? cell(r.missing.join("; ")) : "-"} | ${r.invented.length ? cell(r.invented.join("; ")) : "-"} | ${notes.length ? cell(notes.join("; ")) : "-"} |`);
+    L.push(`| ${r.persona_id} | ${label[r.status]} | ${validOn} | ${r.status === "not_recorded" || r.status === "rejected" ? "-" : r.envelope_errors.length ? "FAIL" : "ok"} | ${r.missing.length ? cell(r.missing.join("; ")) : "-"} | ${r.invented.length ? cell(r.invented.join("; ")) : "-"} | ${notes.length ? cell(notes.join("; ")) : "-"} |`);
   }
   const bad = report.results.filter((r) => r.validator_errors.length);
   if (bad.length) {
@@ -253,6 +274,16 @@ export function renderResults(report: Report): string {
       L.push("");
       L.push(`**${r.persona_id}**`);
       for (const e of r.validator_errors.slice(0, 8)) L.push(`- ${cell(e)}`);
+    }
+  }
+  const env = report.results.filter((r) => r.envelope_errors.length);
+  if (env.length) {
+    L.push("");
+    L.push("## Envelope failures");
+    for (const r of env) {
+      L.push("");
+      L.push(`**${r.persona_id}**`);
+      for (const e of r.envelope_errors.slice(0, 8)) L.push(`- ${cell(e)}`);
     }
   }
   const timed = report.results.filter((r) => r.duration_ms !== null || r.tokens);

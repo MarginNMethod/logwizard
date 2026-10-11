@@ -86,6 +86,21 @@ describe("diffPlan", () => {
     expect(kinds(run(q)).sort()).toEqual(["missing:alert", "missing:contributors"]);
   });
 
+  it("field_label_alternatives: accepts the persona's own wording, still flags when neither wording is present", () => {
+    const exp: Expected = { ...expected, field_labels_required: ["Organization", "Notes"], field_label_alternatives: { Organization: ["Organization name"] } };
+    const plan = basePlan();
+    plan.logs[0].fields[0].label = "Organization name";
+    const ok = run(plan, exp);
+    expect(ok.issues.filter((i) => i.feature === "field")).toEqual([]);
+    expect(ok.unrequested_fields).not.toContain("Organization name");
+    plan.logs[0].fields[0].label = "Company";
+    const bad = run(plan, exp);
+    expect(bad.issues.filter((i) => i.feature === "field").map((i) => i.detail)).toEqual(["required field label not found: Organization"]);
+    // without the alternatives mechanism the same wording is missing
+    plan.logs[0].fields[0].label = "Organization name";
+    expect(run(plan, { ...exp, field_label_alternatives: undefined }).issues.some((i) => i.feature === "field")).toBe(true);
+  });
+
   it("flags missing required field labels", () => {
     const p = basePlan();
     p.logs[0].fields = p.logs[0].fields.slice(0, 2);

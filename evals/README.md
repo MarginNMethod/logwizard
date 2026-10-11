@@ -16,7 +16,8 @@ No paid API calls, ever (PLAN.md section 3a).
 ```
 evals/
   README.md              this file
-  planner-prompt.md      the planner system prompt (versioned, currently v1)
+  planner-prompt.md      the planner system prompt, v1 (the version the existing recordings used; do not edit)
+  planner-prompt.v2.md   v2 of the prompt (copy of v1 plus three changes); no recordings yet
   personas/              synthetic personas, one JSON file each
   recordings/            recorded planner outputs, one JSON file per persona per prompt version
     README.md            recording file format
@@ -24,6 +25,7 @@ evals/
   src/                   runner (diff.ts, runner.ts, run.ts) and validate-reply.ts helper
   test/                  unit tests and TEST FIXTURES (fake data, not real recordings)
   results.md             written by the runner
+  results-notes.<version>.md  hand-written lead notes the runner appends to results.md for that version
 ```
 
 ## Personas
@@ -73,6 +75,7 @@ Answers are free text, may be empty, and are capped at 500 characters each in th
 | `contributor_count` | length of `contributors` |
 | `time_zone` | IANA name expected in the plan |
 | `field_labels_required` | labels that must appear in some log (case-insensitive, punctuation ignored) |
+| `field_label_alternatives` | optional map from a required label to other wordings that also satisfy it, so the key can accept the persona's own wording |
 | `must_refuse` | impossible asks that must be absent from the plan and named in `unsupported_requests` |
 | `max_follow_up_questions` | follow-up questions the planner may ask for this persona (never more than 2) |
 | `forbidden` | optional strings that must not appear anywhere in the plan |
@@ -144,5 +147,9 @@ Diff notes beyond the rules above:
 - Fields beyond `field_labels_required` are listed as informational and not counted as invented, because `expected` does not list every acceptable field.
 - `forbidden` strings are checked in plan strings. Forbidden strings that contain `@` are also checked in `unsupported_requests`.
 - `tolerate_follow_up_reminder` (optional, `sms-whatsapp`) allows, but does not require, a follow-up reminder when `follow_up_reminder_days` is null.
+- Reply envelope: the runner also runs `validatePlannerReply` (packages/plan-schema) on each recorded reply (`raw_plan`, and `retry_plan` when present) and reports envelope failures in their own column and summary line, separate from plan validity and the diff. Envelope failures are over-length notes (200 characters), more than 2 follow-up questions, extra keys, and a null plan with no question. Errors about the plan itself are not counted here. A recording can be a diff pass and still fail the envelope (`forty-fields` in v1). `--strict` exits 1 on an envelope failure.
+- Label wording: the `career-center` key demanded the label "Organization" while the persona's own answer said "Organization name", and the planner correctly copied the person's wording. Label matching in the key should accept the persona's own wording, so that persona now lists `field_label_alternatives: { "Organization": ["Organization name"] }`. The key was loosened, not the planner. Add alternatives to other personas only when the answer text itself uses that wording.
+- Hand-written notes: if `results-notes.<version>.md` exists, the runner appends it to `results.md` unchanged, so regenerating results does not drop the honesty caveats.
+- Prompt versions: `--version v2` grades `recordings/<id>.v2.json`. With none recorded, every persona reports `not recorded` and no numbers are claimed.
 - Refusal matching ignores case, punctuation, and plural endings ("per-person time zones" matches "Per-person time zone").
 - A recording whose `raw_plan.plan` is null (follow-up questions only) cannot be graded and is reported as invalid. Record the final reply after the scripted answers (see `RECORDING-GUIDE.md`).

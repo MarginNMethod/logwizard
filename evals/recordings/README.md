@@ -28,6 +28,7 @@ A recording is a JSON object with these fields. All are required unless marked o
 | `validation` | object | See below |
 | `notes` | string | Free text: anything odd about the run, what the human checked, model used if known |
 | `retry_plan` | object, optional | The planner's reply after the validator errors were fed back. Present only when `retried` is true |
+| `isolation` | string, optional for v1, required for v2 | `"fresh-subagent"` when a separate new subagent saw only the prompt text and the answers JSON; `"inline"` when the planning happened in the same context as the guide. v1 recordings predate this field and were all inline |
 | `follow_up_answers` | object, optional | Scripted answers given to follow-up questions, if the planner asked any. Keys are the question text |
 | `tokens` | object, optional | `{ "input": n, "output": n }` if the run reported them |
 | `duration_ms` | number, optional | Wall-clock time of the run if known |

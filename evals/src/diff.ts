@@ -12,6 +12,8 @@ export type Expected = {
   contributor_count: number;
   time_zone: string;
   field_labels_required: string[];
+  /** Optional: required label -> other wordings that also satisfy it (the persona's own wording). */
+  field_label_alternatives?: Record<string, string[]>;
   must_refuse: string[];
   max_follow_up_questions: number;
   forbidden?: string[];
@@ -150,9 +152,12 @@ export function diffPlan(expected: Expected, reply: PlannerReply, plan: AnyRec):
   for (const log of logs) for (const f of log.fields ?? []) fieldLabels.push(String(f.label));
   const have = new Set(fieldLabels.map(normalizeLabel));
   for (const label of expected.field_labels_required) {
-    if (!have.has(normalizeLabel(label))) add("missing", "field", `required field label not found: ${label}`);
+    const accepted = [label, ...(expected.field_label_alternatives?.[label] ?? [])];
+    if (!accepted.some((l) => have.has(normalizeLabel(l)))) add("missing", "field", `required field label not found: ${label}`);
   }
-  const required = new Set(expected.field_labels_required.map(normalizeLabel));
+  const required = new Set(
+    [...expected.field_labels_required, ...Object.values(expected.field_label_alternatives ?? {}).flat()].map(normalizeLabel),
+  );
   const unrequested = [...new Set(fieldLabels.filter((l) => !required.has(normalizeLabel(l))))];
 
   // Refusals: absent from the plan, named in unsupported_requests
