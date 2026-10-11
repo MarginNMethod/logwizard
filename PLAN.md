@@ -2,7 +2,9 @@
 
 Working name: **LogWizard** (rename anytime).
 
-This file is the plan for Claude Code. Read it fully before writing any code. Work one phase at a time, and stop at every **GATE** to report back to Aaron before continuing. `AUDIT.md` explains what changed from the first draft and why.
+This file is the plan for Claude Code. Read it fully before writing any code. It is built to be run by a **multi-agent team using oh-my-claudecode (OMC)** with as little human involvement as possible. Section 9a says how the team is set up and what it may and may not do alone. Section 9b lists the few steps only Aaron can do. `AUDIT.md` explains what changed from the first draft and why.
+
+**Autonomy in one paragraph.** Agents do all code, tests, docs, and verification on their own, in parallel where files do not overlap. At each **GATE** an automated check runs and the result is written to `docs/gates/`. Most gates pass or fail without waiting for Aaron. Work stops for a human only at the **human-only steps** in section 9b, because those involve accounts, passwords, Google permission prompts, or money, which an agent must not do on anyone's behalf.
 
 ---
 
@@ -242,7 +244,8 @@ A Google Sheets template that contains a fixed Apps Script project. When the app
 /apps-script              Template engine source, esbuild config, clasp config
 /supabase/migrations      SQL for funnel_events, rate_limits, RLS, retention job
 /evals                    Personas, eval runner, results
-/docs                     Analyst artifacts (see Phase 6) and decisions/
+/docs                     Analyst artifacts (see Phase 6), decisions/, gates/ (gate reports),
+                          setup-guide.md (human steps), OPEN_ITEMS.md (questions for Aaron)
 SPIKES.md                 Findings from Phase 0
 AUDIT.md                  Review of the first draft
 PLAN.md                   This file
@@ -252,7 +255,12 @@ PLAN.md                   This file
 
 ## 8. Phases
 
-Each phase lists tasks, then **acceptance criteria** (how we know it is done). Stop at each **GATE**.
+Each phase lists tasks, then **acceptance criteria** (how we know it is done). Each **GATE** is one of two kinds:
+
+- **AUTO-GATE:** the verification team (section 9a) runs, writes `docs/gates/GATE-N.md`, and the lead continues if everything passes. If it fails, the fix loop runs. The team stops only after the loop limits in section 9a.
+- **HUMAN-GATE:** the team stops and waits for Aaron. These line up with the human-only steps in section 9b.
+
+Gate types: GATE 0 is an AUTO-GATE once Spikes 2 to 4 are done at human step H2 (until then, the team continues with phases that do not depend on them). GATE 2 is an AUTO-GATE. GATE 4 is a HUMAN-GATE (step H3).
 
 ### Phase 0: Verify risky assumptions (spikes)
 
@@ -273,7 +281,7 @@ Also in Phase 0: draft `docs/requirements.md` (problem, users, goals, non-goals)
 
 Acceptance: `SPIKES.md` answers all seven with evidence and a decision.
 
-**GATE 0:** Report findings to Aaron. Do not start Phase 1 until he approves any design changes.
+**GATE 0 (AUTO-GATE, with one condition):** The critic agent reviews `SPIKES.md`. If a spike result forces a design change (for example, Spike 1 methods (a) and (b) both fail), the team writes a decision record and updates this plan before Phase 1 depends on it. Changes that only affect Phase 4 do not block Phases 1 to 3. A change to what the product is or does goes to Aaron (section 9b, item E).
 
 ### Phase 1: Plan schema and validator
 
@@ -301,7 +309,7 @@ Acceptance: one end-to-end run with the sample plan, timed.
 
 Acceptance: from a pasted plan, the engine builds the tabs, the Form and sidebar both work, routing copies correctly without duplicates, "Send test reminder" sends one email, user-entered text beginning with `=` stays plain text, and re-running setup changes nothing (no duplicate triggers).
 
-**GATE 2:** Send Aaron screenshots and a short screen recording script for him to verify.
+**GATE 2 (AUTO-GATE):** Engine unit tests pass, the bundled script passes a syntax and scope check, and the verifier confirms the Phase 2 acceptance list against the test account output captured at H2. Screenshots and a short recording script are saved in `docs/gates/GATE-2.md` for Aaron to look at later; the team does not wait for them.
 
 ### Phase 3: Interview and AI planner
 
@@ -324,7 +332,7 @@ Acceptance: eval targets met; the API key and Supabase service key are server-si
 
 Acceptance: end-to-end test in a fresh test Google account from interview to a working reminder email, timed. Record the time; the target is under 20 minutes total.
 
-**GATE 4:** Aaron runs the full flow himself.
+**GATE 4 (HUMAN-GATE):** Aaron runs the full flow himself (step H3 in section 9b). Everything before this point is already built, tested, and documented, so H3 is a timed run, not a review session.
 
 ### Phase 5: Microsoft adapter (design)
 
@@ -360,35 +368,108 @@ Write in plain language, aimed at a hiring manager who will skim. No em dashes i
 - **Secrets** go in `.env.local`, which must be in `.gitignore`. Provide `.env.example` with placeholder values.
 - **Tests first** for the schema and engine logic.
 - **Small commits** with clear messages, one task per commit where practical.
-- **Ask before** adding dependencies not listed in section 3, changing the schema after Phase 1, applying database migrations, or expanding scope.
-- **Stop at every GATE** and summarize: what was done, what was verified, what is uncertain, and what you need from Aaron.
+- **Dependencies, schema changes, and migrations.** The dependencies in section 3 are pre-approved when Aaron approves this plan (pnpm, esbuild, clasp, Vercel BotID, and the packages the web app needs). Any other dependency needs a decision record and a critic agent sign-off. A schema change after Phase 1 needs a decision record, a critic sign-off, and updated tests. Database migrations may be applied only to the LogWizard Supabase project, never to any other project.
+- **Scope changes go to Aaron.** Anything that changes what the product does or promises (a new platform, new data stored server-side, a new feature class) is a human item (section 9b, item E). The team records the question, keeps working on everything else, and does not guess.
+- **At every GATE** write the gate report to `docs/gates/GATE-N.md`: what was done, what was verified, what is uncertain, and what needs Aaron.
 - **Explain in plain language.** Aaron is technical but switching fields; define jargon the first time it appears in any report.
 
-### 9a. Using oh-my-claudecode (OMC)
+### 9a. The autonomous OMC team
+
+**How it runs.** One lead session orchestrates a team of named agents using OMC's `team` skill, wrapped in `ralph` for retry-until-verified. The team's built-in stages are `team-plan`, `team-prd`, `team-exec`, `team-verify`, and `team-fix`, and it loops through exec, verify, and fix until verification passes or a stop condition is reached. The phases in section 8 are the work breakdown.
+
+**Durable progress.** `ultragoal` keeps a ledger of one goal per phase under `.omc/ultragoal`. It survives restarts. The `.omc/` folder is git-ignored, so the ledger lives on this machine only; the gate reports in `docs/gates/` are the committed record.
+
+**Launch sequence (Aaron, once).**
+
+1. Finish human steps H0 and H1 in section 9b.
+2. Turn on agent teams: set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` for Claude Code (in `~/.claude/settings.json` under `env`). It is not set today.
+3. In the repository, run `/oh-my-claudecode:deepinit` once to generate project guidance files.
+4. Create the goals: `omc ultragoal create-goals --brief-file PLAN.md` (one goal per phase).
+5. Type `/goal` with the aggregate objective that the ultragoal handoff prints. **Aaron has to type this;** the agent cannot set it for him.
+6. Run `/oh-my-claudecode:team ralph "Execute PLAN.md phase by phase using the roster in section 9a"`.
+
+**Roster.** Each worker owns specific folders and does not write outside them, so two agents never edit the same file. The lead is the only agent that commits and merges.
+
+| Worker name | OMC agent | Owns | Used in |
+|---|---|---|---|
+| `lead` | the session itself | git, `docs/gates/`, status notes in `PLAN.md` | all phases |
+| `scout` | `explore`, `document-specialist` | `SPIKES.md` | 0 |
+| `architect` | `architect` | `docs/decisions/` | 0, any design change |
+| `schema-dev` | `executor` + `tdd` | `packages/plan-schema` | 1 |
+| `engine-dev` | `executor` + `tdd` | `packages/engine-logic`, `apps-script` | 1.5, 2 |
+| `web-dev` | `executor` | `apps/web` (API routes, planner, Google build step) | 3, 4 |
+| `ui-dev` | `designer` | `apps/web` UI components only | 3 |
+| `data-dev` | `executor` | `supabase/migrations`, funnel and rate-limit code | 3 |
+| `eval-dev` | `scientist` | `evals/` | 3 |
+| `docs-dev` | `writer` | `docs/` except `docs/decisions` and `docs/gates` | 0, 5, 6 |
+| `verifier` | `verifier`, `test-engineer` | nothing (read and run only) | every gate |
+| `reviewer` | `code-reviewer`, `security-reviewer` | nothing (read only) | every gate |
+| `critic` | `critic` | nothing (read only) | plan changes, Gate 0 |
+
+Where files do not overlap, workers run in parallel. For example `scout` and `schema-dev` start together; `engine-dev` starts once the schema types are committed; `web-dev`, `data-dev`, and `eval-dev` run together in Phase 3; `docs-dev` refreshes each document as its phase finishes.
+
+**Automated gate (every AUTO-GATE).**
+
+1. `verifier` runs all tests, runs the section 4 example plan through the validator, and checks the phase acceptance list line by line.
+2. `reviewer` reviews the diff for correctness and security (secrets, scopes, injection, data stored server-side).
+3. A scan confirms no em dashes in documents, no real emails (only `example.com`), and no secrets in git.
+4. The report goes to `docs/gates/GATE-N.md`. Pass means the lead merges and starts the next phase.
+
+**Autonomy limits (stop conditions).**
+
+- Fix loop: at most 5 exec, verify, fix cycles per phase. If the same error appears 3 times, stop that phase, record the root cause in the gate report, and move on to any phase that does not depend on it.
+- Budget: set `OMC_RUN_BUDGET_TOKENS` before launch. At 90% the team finishes the current phase; at 100% it stops with state saved, and a relaunch resumes.
+- Unknowns: when a decision belongs to Aaron, the team records it in `docs/OPEN_ITEMS.md` with the assumption it is working under, keeps going on unblocked work, and leads its final report with the open items.
+- The team never works around a human-only step (section 9b) and never asks for or handles passwords, API keys, or tokens. Secrets go into `.env.local` and Vercel environment settings, entered by Aaron.
+- The team never pushes to a remote, deploys to production, or changes billing settings without a human step. Deploys to Vercel preview URLs are allowed after H1.
+
+**OMC tools by phase.**
 
 | Phase | Use |
 |---|---|
-| Setup | Run `deepinit` to generate project guidance files. Record gate status in project memory. |
-| 0 Spikes | `research` and `external-context` for documentation checks. `tracer` agent when a spike result is unclear. |
-| 1, 1.5, 2 | `tdd` skill and `executor` agent for schema and engine work. |
+| 0 Spikes | `scout` runs `research` and `external-context` for documentation checks. `tracer` agent when a spike result is unclear. |
+| 1, 1.5, 2 | `tdd` skill and `executor` agents for schema and engine work. |
 | 3 | `executor` for the API and planner, `designer` for the interview UI, `scientist` for eval analysis. |
-| Every GATE | Run `verify`, then `code-reviewer` and `security-reviewer` agents. Include their findings in the gate report. |
-| 6 | `writer` agent for drafts, then `ai-slop-cleaner`, and a check that no document contains an em dash. |
+| Every GATE | `verify`, then `code-reviewer` and `security-reviewer`. |
+| 6 | `writer` for drafts, then `ai-slop-cleaner`, and a no-em-dash check. |
+
+### 9b. Human-only steps
+
+These cannot be done by an agent. Each one involves an account, a password, a Google permission prompt, or money. The team batches them into three short sessions so Aaron is interrupted as little as possible. Agents prepare everything before each session and check the results after it.
+
+| Step | When | What Aaron does | What the team prepares or checks |
+|---|---|---|---|
+| **H0: Accounts and keys** (about 30 minutes, once) | Before launch | Items A to D below | Provides exact click-by-click instructions in `docs/setup-guide.md`. Verifies each setting afterward by running a check script that never prints secret values. |
+| **H1: Approve the plan** (about 5 minutes) | Before launch | Approve this plan. That approves the pre-approved dependencies and permits creating the LogWizard Supabase project and Vercel project. The team checks the Supabase cost and confirms it is free before creating anything. | Setup worker installs pnpm, esbuild, clasp, and creates the two projects. |
+| **H2: Google hands-on** (about 15 to 20 minutes) | After Phases 1 to 2 are built and the template exists | In the test Google account: click the "Make a copy" link, then Activate, and click Allow on Google's permission prompt. Submit one test Form entry. | Runs Spikes 1 to 4 as a numbered script of what to click, with expected results. Collects the output and writes `SPIKES.md` and the GATE 2 report. |
+| **H3: Final timed run** (about 20 minutes) | After Phases 3 to 4 | Run the full flow from the interview to a reminder email, with a timer. | Sets up the run sheet and a one-page checklist. Records the time and step counts for `docs/case-study.md`. |
+
+The human items:
+
+- **A. Policy and ownership.** Confirm the employer outside-work and intellectual property policy allows this personal project. Pick the final name.
+- **B. Google.** Create a free Google Cloud project and an OAuth consent screen (testing mode). Create a separate test Google account (not a work account). Enable the Apps Script API in that account's settings.
+- **C. Keys and limits.** Create an Anthropic API key and set a monthly spending limit. Put keys in `.env.local` and in Vercel environment settings.
+- **D. Repository.** Create the GitHub repository and connect Vercel to it. The team does not push; Aaron pushes or approves the first push.
+- **E. Scope decisions.** Answer entries in `docs/OPEN_ITEMS.md` when the team reaches the end of its unblocked work.
+
+If an agent is asked to do any of A to D on Aaron's behalf (for example, create an account), it declines and points to `docs/setup-guide.md`.
 
 ---
 
-## 10. Before Phase 0: Aaron's checklist
+## 10. Before launch: checklist
 
-- [ ] Confirm the employer outside-work and intellectual property policy allows this personal project.
-- [ ] Create a free Google Cloud project and an OAuth consent screen (testing mode).
-- [ ] Create a separate test Google account (not a work account).
-- [ ] Get an Anthropic API key and set a monthly spending limit.
-- [ ] Create a GitHub repository.
-- [ ] Create a Vercel project linked to the repository.
-- [ ] Create a new Supabase project for LogWizard (separate from the existing "Development" project).
-- [ ] Publish a privacy page URL (from `docs/privacy.md`) for the OAuth consent screen.
-- [ ] Install Node.js, pnpm, and `clasp`, and enable the Apps Script API in the test account's settings.
-- [ ] Pick the final name.
+Agents handle the items marked (team). Aaron handles the rest (see 9b).
+
+- [ ] Confirm the employer outside-work and intellectual property policy allows this personal project. (Aaron, A)
+- [ ] Create a free Google Cloud project and an OAuth consent screen in testing mode. (Aaron, B)
+- [ ] Create a separate test Google account, not a work account, and enable the Apps Script API in its settings. (Aaron, B)
+- [ ] Get an Anthropic API key and set a monthly spending limit. (Aaron, C)
+- [ ] Create a GitHub repository and connect Vercel to it. (Aaron, D)
+- [ ] Create a new Supabase project for LogWizard, separate from the existing "Development" project. (team, after H1; checks cost first)
+- [ ] Install pnpm, esbuild, and `clasp`. (team, after H1)
+- [ ] Draft the privacy page from `docs/privacy.md` and host it on the Vercel preview URL so it can be used as the OAuth consent screen link. (team; Aaron pastes the URL into the consent screen)
+- [ ] Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `OMC_RUN_BUDGET_TOKENS`. (Aaron, section 9a launch sequence)
+- [ ] Pick the final name. (Aaron, A)
 
 ---
 
@@ -409,3 +490,7 @@ Payments, multiple organizations, any stored copy of users' plans, answers, or i
 | Email limit hit | Low | Missed reminders | Batching, send counter, `Activity` warning |
 | Hiring manager cannot try the app | High if unaddressed | Portfolio loses impact | Demo mode, recorded walkthrough |
 | Scope grows | Medium | Project stalls | Gates, out-of-scope list, ask-before rule |
+| Agents edit the same files or drift from the plan | Medium | Merge conflicts, wrong behavior | Folder ownership per worker, lead-only commits, automated gate with an independent verifier and reviewer |
+| Autonomous loop burns budget or repeats a failure | Medium | Wasted cost, no progress | Fix-loop limits, token budget, stop-and-record after 3 identical errors |
+| Agent teams flag is off, or `/goal` is not set | High at first launch | Team does not start | Launch sequence in 9a; `docs/setup-guide.md` checks both before starting |
+| Human-only steps pile up and stall the run | Medium | Idle time | Batched into H0 to H3; unblocked phases continue while waiting |

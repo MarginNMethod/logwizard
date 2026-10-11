@@ -52,5 +52,6 @@ Nothing has been built yet. Items marked "verify in Phase 0" are informed expect
 
 ## Also added
 
+- **Revision 3:** the plan now runs as an autonomous multi-agent OMC team (section 9a), with automated gates, stop conditions, and a short list of human-only steps (section 9b) for accounts, keys, and Google permission prompts.
 - Phase-by-phase **oh-my-claudecode** workflow (section 9a).
 - A short **risk register** (section 12).
