@@ -1,4 +1,7 @@
 packages:
   - "apps/*"
+  - "apps-script"
   - "packages/*"
   - "evals"
+onlyBuiltDependencies:
+  - esbuild
