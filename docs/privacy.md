@@ -69,7 +69,7 @@ Some visitors want to try their own answers with an AI model. To do this, they c
 - **Closing the page clears the key.**
 - **Replay mode needs no key.** It uses recorded example plans and does not contact any AI service.
 
-The project's tests are meant to check that the key is never stored or logged. Unverified: this test is part of the Phase 3 build and has not yet been run when this draft was written.
+The project's tests check that the key is never stored or logged: an automated test confirms it never appears in logs, error messages, or responses, even when the underlying error text contains it. This was tested against a mock of the AI service only, not a real call.
 
 ---
 

@@ -3,11 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "prepare-data": "node scripts/prepare-data.mjs",
+    "dev": "node scripts/prepare-data.mjs && next dev",
+    "build": "node scripts/prepare-data.mjs && next build",
     "start": "next start",
-    "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "test": "node scripts/prepare-data.mjs && vitest run --passWithNoTests",
+    "typecheck": "node scripts/prepare-data.mjs && tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
