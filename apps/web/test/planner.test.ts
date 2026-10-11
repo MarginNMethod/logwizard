@@ -14,6 +14,8 @@ const goodReply = async () => {
   return provider.generate({ input: { answers: career.answers } });
 };
 
+const tool = (input: unknown) => ({ type: "tool_use", name: "emit_plan", input });
+
 afterEach(() => vi.restoreAllMocks());
 
 describe("replay mode", () => {
@@ -55,7 +57,7 @@ describe("byok mode", () => {
     const seen: Record<string, unknown>[] = [];
     const factory: ClientFactory = (apiKey) => {
       expect(apiKey).toBe(KEY);
-      return { messages: { create: async (p: Params) => (seen.push(p), { content: [{ type: "text", text: JSON.stringify(reply) }] }) } } as never;
+      return { messages: { create: async (p: Params) => (seen.push(p), { content: [tool(reply)] }) } } as never;
     };
     const out = await handlePlanRequest({ answers: career.answers }, new Headers({ [BYOK_HEADER]: KEY }), { ANTHROPIC_MODEL: "test-model" }, factory);
     expect(out).toMatchObject({ ok: true, mode: "byok", validation_result: "pass", retry_count: 0 });
@@ -66,7 +68,7 @@ describe("byok mode", () => {
 
   it("defaults the model to claude-sonnet-5-5", async () => {
     const seen: Record<string, unknown>[] = [];
-    const p = createByokProvider(KEY, { env: {}, clientFactory: factoryFor(async (x) => (seen.push(x), { content: [{ type: "text", text: "{}" }] })) });
+    const p = createByokProvider(KEY, { env: {}, clientFactory: factoryFor(async (x) => (seen.push(x), { content: [tool({})] })) });
     await p.generate({ input: { answers: career.answers } });
     expect(seen[0]?.model).toBe("claude-sonnet-5-5");
   });
@@ -77,7 +79,7 @@ describe("byok mode", () => {
     const factory = factoryFor(async (p) => {
       const content = (p.messages as Array<{ content: string }>)[0]!.content;
       calls.push(content);
-      return { content: [{ type: "text", text: calls.length === 1 ? '{"plan":{"schema_version":1},"follow_up_questions":[],"unsupported_requests":[]}' : JSON.stringify(good) }] };
+      return { content: [tool(calls.length === 1 ? { plan: { schema_version: 1 }, follow_up_questions: [], unsupported_requests: [] } : good)] };
     });
     const out = await runPlanner(createByokProvider(KEY, { clientFactory: factory }), { answers: career.answers });
     expect(out).toMatchObject({ ok: true, validation_result: "retry_pass", retry_count: 1 });
@@ -86,7 +88,7 @@ describe("byok mode", () => {
   });
 
   it("gives up after one retry with a friendly error", async () => {
-    const factory = factoryFor(async () => ({ content: [{ type: "text", text: "not json" }] }));
+    const factory = factoryFor(async () => ({ content: [tool({ plan: {}, follow_up_questions: [], unsupported_requests: [] })] }));
     const out = await runPlanner(createByokProvider(KEY, { clientFactory: factory }), { answers: career.answers });
     expect(out).toMatchObject({ ok: false, code: "invalid_plan", status: 422 });
   });

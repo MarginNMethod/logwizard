@@ -57,6 +57,48 @@ export function sanitizeEvent(body: unknown): FunnelEvent | null {
   return { session_id: b.session_id.toLowerCase(), step: b.step as FunnelEvent["step"], duration_ms, validation_result, retry_count, ai_mode: b.ai_mode as FunnelEvent["ai_mode"] };
 }
 
+/** The step that must already have been seen in the same session before this one is plausible. */
+const REQUIRES: Partial<Record<FunnelEvent["step"], FunnelEvent["step"]>> = {
+  interview_completed: "interview_started",
+  plan_requested: "interview_started",
+  plan_generated: "plan_requested",
+  plan_validated: "plan_requested",
+  preview_opened: "plan_requested",
+  preview_edited: "preview_opened",
+  plan_approved: "preview_opened",
+  plan_downloaded: "preview_opened",
+  build_started: "plan_approved",
+  build_succeeded: "build_started",
+  build_failed: "build_started",
+};
+const MAX_SESSIONS = 5000;
+const seenBySession = new Map<string, Set<string>>();
+
+export function resetEventSessions(): void {
+  seenBySession.clear();
+}
+
+/**
+ * Small in-memory per-session record (per server instance). Returns false for a step whose
+ * prerequisite was never seen for this session. It raises the cost of faking the funnel;
+ * it does not make the metrics trustworthy.
+ */
+export function acceptInOrder(event: FunnelEvent): boolean {
+  const need = REQUIRES[event.step];
+  const seen = seenBySession.get(event.session_id);
+  if (need && !seen?.has(need)) return false;
+  if (seen) {
+    seen.add(event.step);
+  } else {
+    if (seenBySession.size >= MAX_SESSIONS) {
+      const oldest = seenBySession.keys().next().value;
+      if (oldest !== undefined) seenBySession.delete(oldest);
+    }
+    seenBySession.set(event.session_id, new Set([event.step]));
+  }
+  return true;
+}
+
 /** Inserts one funnel event. No-op without Supabase env. Never throws; fails open. */
 export async function recordEvent(
   event: FunnelEvent,

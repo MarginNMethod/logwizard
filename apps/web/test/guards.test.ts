@@ -36,6 +36,16 @@ describe("repository guards", () => {
     expect(readers).toEqual([]);
   });
 
+  it("never touches process.env with an ANTHROPIC_* name outside live.ts", () => {
+    const readers = files.filter((f) => {
+      if (!/^(lib|app|components)\//.test(f) || f === "lib/planner/live.ts") return false;
+      const text = readFileSync(path.join(root, f), "utf8");
+      // A line naming both process.env and ANTHROPIC_, or any computed process.env[...] lookup.
+      return text.split("\n").some((line) => (/process\.env/.test(line) && /ANTHROPIC_/.test(line)) || /process\.env\[/.test(line));
+    });
+    expect(readers).toEqual([]);
+  });
+
   it("keeps the expected block out of the shipped personas", () => {
     const personas = readFileSync(path.join(root, "data/personas.json"), "utf8");
     expect(personas).not.toContain('"expected"');

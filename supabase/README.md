@@ -18,6 +18,7 @@ Row Level Security is on for both tables with no policies, and all privileges ar
 ## Files
 
 - `migrations/20261011000000_create_metrics_tables.sql`: tables, constraints, RLS, revokes.
+- `migrations/20261011000200_increment_rate_limit.sql`: atomic counter function used by the web rate limiter (service role only).
 - `migrations/20261011000100_metrics_retention_cron.sql`: 90 day retention via pg_cron. Apply only if pg_cron is enabled on the free plan. Otherwise skip it and clear old rows by hand (`delete from public.funnel_events where created_at < now() - interval '90 days';` and the same for `rate_limits` on `window_start`).
 - `verify.sql`: read-only checks.
 - `CONTRACT.md`: insert payloads and the fail-open rule for the web server.

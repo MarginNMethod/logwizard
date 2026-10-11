@@ -11,13 +11,42 @@ export const DEFAULT_MODEL = "claude-sonnet-5-5";
 type Env = Record<string, string | undefined>;
 
 /** The slice of the SDK that is used. Injectable for tests. */
+export type ReplyBlock = { type: string; text?: string; name?: string; input?: unknown };
 export type MessagesClient = {
-  messages: { create(params: Record<string, unknown>): Promise<{ content: Array<{ type: string; text?: string }> }> };
+  messages: { create(params: Record<string, unknown>): Promise<{ content: ReplyBlock[] }> };
 };
 export type ClientFactory = (apiKey: string) => MessagesClient;
 
-export const defaultClientFactory: ClientFactory = (apiKey) =>
-  new Anthropic({ apiKey, maxRetries: 0, timeout: 90_000 }) as unknown as MessagesClient;
+/**
+ * Everything is passed explicitly so the SDK never falls back to ANTHROPIC_AUTH_TOKEN or
+ * ANTHROPIC_BASE_URL from the environment. A visitor key must only ever go to api.anthropic.com.
+ */
+export const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
+export function clientOptions(apiKey: string) {
+  return { apiKey, authToken: null, baseURL: ANTHROPIC_BASE_URL, maxRetries: 0, timeout: 90_000 } as const;
+}
+export const defaultClientFactory: ClientFactory = (apiKey) => new Anthropic(clientOptions(apiKey)) as unknown as MessagesClient;
+
+export const PLAN_TOOL_NAME = "emit_plan";
+
+/**
+ * The planner reply envelope as a JSON Schema. The inside of `plan` is checked by the validator
+ * (validatePlannerReply), not here, so it is only declared as an object or null.
+ */
+export const PLAN_TOOL = {
+  name: PLAN_TOOL_NAME,
+  description: "Return the planner reply: the plan (or null with follow-up questions), follow-up questions, and unsupported requests.",
+  input_schema: {
+    type: "object",
+    properties: {
+      plan: { type: ["object", "null"], description: "The full plan object, or null only when there is at least one follow-up question." },
+      follow_up_questions: { type: "array", items: { type: "string", maxLength: 200 }, maxItems: 2 },
+      unsupported_requests: { type: "array", items: { type: "string", maxLength: 200 }, maxItems: 20 },
+    },
+    required: ["plan", "follow_up_questions", "unsupported_requests"],
+    additionalProperties: false,
+  },
+} as const;
 
 /** Loose shape check only. The provider decides whether the key really works. */
 export function looksLikeKey(key: string): boolean {
@@ -30,14 +59,13 @@ export function userMessage({ input, validation_errors }: ProviderRequest): stri
   return JSON.stringify(payload);
 }
 
-/** Pulls the JSON object out of the model's text. Returns null when there is none. */
-export function parseReplyText(text: string): unknown {
-  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    return null;
+/** Reads the forced tool call's input. Throws a friendly error when the reply has none. */
+export function readToolInput(content: ReplyBlock[] | undefined): unknown {
+  const block = (content ?? []).find((b) => b.type === "tool_use" && b.name === PLAN_TOOL_NAME);
+  if (!block || typeof block.input !== "object" || block.input === null) {
+    throw new PlannerError("provider_rejected", "The AI provider did not return a plan in the expected form. Try again.", 502);
   }
+  return block.input;
 }
 
 function safeFailure(error: unknown, apiKey: string): PlannerError {
@@ -51,7 +79,7 @@ function safeFailure(error: unknown, apiKey: string): PlannerError {
 
 export function createByokProvider(apiKey: string, opts: { env?: Env; clientFactory?: ClientFactory } = {}): PlannerProvider {
   if (!looksLikeKey(apiKey)) throw new PlannerError("bad_key", "That does not look like an API key.", 400);
-  const model = (opts.env ?? process.env).ANTHROPIC_MODEL || DEFAULT_MODEL;
+  const model = (opts.env ?? {}).ANTHROPIC_MODEL || DEFAULT_MODEL;
   const client = (opts.clientFactory ?? defaultClientFactory)(apiKey);
   return {
     mode: "byok",
@@ -62,10 +90,12 @@ export function createByokProvider(apiKey: string, opts: { env?: Env; clientFact
           max_tokens: 8192,
           system: PLANNER_PROMPT,
           messages: [{ role: "user", content: userMessage(req) }],
+          tools: [PLAN_TOOL],
+          tool_choice: { type: "tool", name: PLAN_TOOL_NAME },
         });
-        const text = res.content.map((b) => (b.type === "text" ? (b.text ?? "") : "")).join("");
-        return parseReplyText(text);
+        return readToolInput(res.content);
       } catch (error) {
+        if (error instanceof PlannerError) throw error;
         throw safeFailure(error, apiKey);
       }
     },

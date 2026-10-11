@@ -12,12 +12,16 @@ export interface RemoteCounter {
 export type RateLimitResult = { allowed: boolean; retryAfterSec: number; source: "memory" | "supabase" };
 
 const memory = new Map<string, { windowStart: number; count: number }>();
-const MAX_MEMORY_KEYS = 5000;
+export const MAX_MEMORY_KEYS = 5000;
 // Used only when RATE_LIMIT_SALT is unset: hashes still never contain a raw IP.
 const fallbackSalt = randomBytes(16).toString("hex");
 
 export function resetRateLimitMemory(): void {
   memory.clear();
+}
+
+export function rateLimitMemorySize(): number {
+  return memory.size;
 }
 
 /** Salted SHA-256 hex of the route and visitor IP. The raw IP is never stored or sent anywhere. */
@@ -26,22 +30,42 @@ export function hashVisitor(ip: string, route: string, env: Env = process.env): 
   return createHash("sha256").update(`${salt}|${route}|${ip}`).digest("hex");
 }
 
+/** Key used when no usable client address header exists. Shared, so callers should apply a stricter limit. */
+export const UNKNOWN_VISITOR = "unknown";
+
+/**
+ * The client address. Platform-set headers win. The first x-forwarded-for hop can be written by the
+ * client, so when only x-forwarded-for exists the right-most entry (added by the nearest proxy) is used.
+ */
 export function visitorIp(headers: Headers): string {
-  const fwd = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return fwd || headers.get("x-real-ip")?.trim() || "unknown";
+  const platform = headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() || headers.get("x-real-ip")?.trim();
+  if (platform) return platform;
+  const hops = (headers.get("x-forwarded-for") ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+  return hops[hops.length - 1] || UNKNOWN_VISITOR;
 }
+
+/** Limit to use for a route: the stricter unknownLimit when the address could not be determined. */
+export function limitFor(ip: string, limit: number, unknownLimit: number = Math.max(1, Math.floor(limit / 2))): number {
+  return ip === UNKNOWN_VISITOR ? Math.min(limit, unknownLimit) : limit;
+}
+
+/** The slice of the Supabase client that is used. Injectable for tests. */
+export type RpcClient = { rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> };
 
 function supabaseCounter(env: Env): RemoteCounter | null {
   const sb = getSupabase(env);
-  if (!sb) return null;
+  return sb ? counterFromClient(sb as unknown as RpcClient) : null;
+}
+
+export function counterFromClient(sb: RpcClient): RemoteCounter {
   return {
+    // One atomic statement in Postgres. See supabase-rpc-proposal.sql for the function.
     async increment(keyHash, windowStartIso) {
-      const read = await sb.from("rate_limits").select("request_count").eq("key_hash", keyHash).eq("window_start", windowStartIso).maybeSingle();
-      if (read.error) throw new Error("read failed");
-      const next = ((read.data?.request_count as number | undefined) ?? 0) + 1;
-      const write = await sb.from("rate_limits").upsert({ key_hash: keyHash, window_start: windowStartIso, request_count: next });
-      if (write.error) throw new Error("write failed");
-      return next;
+      const { data, error } = await sb.rpc("increment_rate_limit", { p_key_hash: keyHash, p_window_start: windowStartIso });
+      if (error) throw new Error("rpc failed");
+      const n = Number(data);
+      if (!Number.isFinite(n)) throw new Error("rpc returned no count");
+      return n;
     },
   };
 }
@@ -64,10 +88,15 @@ export async function checkRateLimit(opts: {
 
   if (memory.size > MAX_MEMORY_KEYS) {
     for (const [k, v] of memory) if (v.windowStart < windowStart) memory.delete(k);
-    if (memory.size > MAX_MEMORY_KEYS) memory.clear();
+    // Still full of current-window keys: drop the oldest-inserted first (Map keeps insertion order).
+    for (const k of memory.keys()) {
+      if (memory.size <= MAX_MEMORY_KEYS) break;
+      memory.delete(k);
+    }
   }
   const entry = memory.get(opts.keyHash);
   const count = entry && entry.windowStart === windowStart ? entry.count + 1 : 1;
+  memory.delete(opts.keyHash); // re-insert so insertion order tracks recent use
   memory.set(opts.keyHash, { windowStart, count });
   if (count > opts.limit) return { allowed: false, retryAfterSec, source: "memory" };
 

@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { Plan } from "@logwizard/plan-schema";
 import personasJson from "@/data/personas.json";
 import { CAPS } from "@/lib/caps";
-import { requestPlan } from "@/lib/client/api";
+import { BAD_KEY_FORMAT_MESSAGE, isValidKeyFormat, requestPlan } from "@/lib/client/api";
 import { track } from "@/lib/client/track";
 import { emptyAnswers, QUESTIONS, type Answers } from "@/lib/questions";
+import { editedSample, withBrowserTimeZone } from "@/lib/wizard-logic";
 import { DemoEnd } from "./DemoEnd";
 import { PlanPreview } from "./PlanPreview";
 import { button, cardClass, inputClass } from "./styles";
@@ -52,9 +53,15 @@ export function Wizard() {
   }
 
   function begin() {
+    const key = apiKey.trim();
+    if (key && !isValidKeyFormat(key)) {
+      setError(BAD_KEY_FORMAT_MESSAGE);
+      return;
+    }
+    setError("");
     track("interview_started", mode);
     started.current = Date.now();
-    setAnswers((a) => (a.q10_time_zone || !browserTz ? a : { ...a, q10_time_zone: browserTz }));
+    setAnswers((a) => withBrowserTimeZone(a, Boolean(personaId), browserTz));
     setQIndex(0);
     setStage("question");
   }
@@ -95,7 +102,7 @@ export function Wizard() {
   const q = QUESTIONS[qIndex]!;
   const answer = answers[q.key];
   const persona = PERSONAS.find((p) => p.id === personaId);
-  const differsFromSample = Boolean(persona) && QUESTIONS.some((x) => (answers[x.key] ?? "").trim() !== persona!.answers[x.key].trim());
+  const differsFromSample = editedSample(answers, persona?.answers);
 
   return (
     <div className="space-y-4">
@@ -135,6 +142,7 @@ export function Wizard() {
             </p>
           </div>
 
+          {error && <p role="alert" className="mt-3 rounded border border-red-700 bg-red-50 p-3 text-red-900">{error}</p>}
           <p className="mt-5 text-sm" aria-live="polite">
             {mode === "byok" ? "Mode: your own key. Your answers will be sent to the AI provider for one request." : persona ? "Mode: Demo (recorded plan, no AI call)." : "Choose a sample person or enter a key to continue."}
           </p>

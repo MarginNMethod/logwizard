@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Plan, PlanError, PlanField } from "@logwizard/plan-schema";
 import { requestValidate } from "@/lib/client/api";
 import { track } from "@/lib/client/track";
+import { parseDaysBefore } from "@/lib/wizard-logic";
 import { button, cardClass, inputClass } from "./styles";
 
 type Props = {
@@ -39,6 +40,24 @@ function OptionsEditor({ field, onChange }: { field: PlanField; onChange: (optio
         }}
       />
     </div>
+  );
+}
+
+function DaysBeforeInput({ id, value, onChange }: { id: string; value: number; onChange: (days: number | null) => void }) {
+  const [text, setText] = useState(String(value));
+  return (
+    <input
+      id={id}
+      type="number"
+      min={0}
+      max={30}
+      className={`${inputClass} mt-1`}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(parseDaysBefore(e.target.value));
+      }}
+    />
   );
 }
 
@@ -176,14 +195,10 @@ export function PlanPreview({ initialPlan, initialSummary, unsupported, validati
                 ) : (
                   <div>
                     <label htmlFor={`days-${ri}`} className="block text-sm font-semibold">Days before the follow-up date (0 to 30)</label>
-                    <input
+                    <DaysBeforeInput
                       id={`days-${ri}`}
-                      type="number"
-                      min={0}
-                      max={30}
-                      className={`${inputClass} mt-1`}
                       value={r.days_before}
-                      onChange={(e) => edit((d) => { const dr = d.reminders[ri]; if (dr?.type === "follow_up_due") dr.days_before = Number(e.target.value); })}
+                      onChange={(days) => edit((d) => { const dr = d.reminders[ri]; if (dr?.type === "follow_up_due") dr.days_before = days as unknown as number; })}
                     />
                   </div>
                 )}
