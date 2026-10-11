@@ -1,0 +1,32 @@
+{
+  "id": "solo-no-contributors",
+  "title": "One-person solo user with no contributors",
+  "browser_time_zone": "America/Los_Angeles",
+  "answers": {
+    "q1_interaction_kinds": "other: freelance clients",
+    "q2_system_name": "Freelance Client Log",
+    "q3_details": "Client name, email, project, date, outcome, next step, notes",
+    "q4_areas": "No, one list is fine.",
+    "q5_multi_area_copy": "Not applicable.",
+    "q6_contributors": "Nobody, it is just me.",
+    "q7_contributor_alert": "Yes, email me when someone else adds an entry.",
+    "q8_follow_up": "No.",
+    "q9_weekly_digest": "No.",
+    "q10_time_zone": "America/Los_Angeles"
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": false,
+    "weekly_digest_day": null,
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": false,
+    "contributor_count": 0,
+    "time_zone": "America/Los_Angeles",
+    "field_labels_required": ["Client name", "Email", "Project", "Date", "Outcome", "Next step", "Notes"],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "q7 says yes but q6 says there are no contributors. Expected: contributors is an empty array and NO alert is emitted, because an alert for contributor entries with no contributors is meaningless. The planner should mention this in unsupported_requests or notes (for example 'alert skipped: no contributors listed'). It must not invent a contributor."
+  }
+}

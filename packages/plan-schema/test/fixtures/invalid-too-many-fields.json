@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "system_name": "Employer Outreach Log",
+  "time_zone": "America/Chicago",
+  "owner": {
+    "name": "Sample Owner",
+    "email": "owner@example.com"
+  },
+  "contributors": [
+    {
+      "name": "Sample Rep",
+      "email": "rep@example.com",
+      "role": "contributor"
+    }
+  ],
+  "logs": [
+    {
+      "id": "main",
+      "name": "All Employers",
+      "fields": [
+        {
+          "key": "f0",
+          "label": "Field 0",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f1",
+          "label": "Field 1",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f2",
+          "label": "Field 2",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f3",
+          "label": "Field 3",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f4",
+          "label": "Field 4",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f5",
+          "label": "Field 5",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f6",
+          "label": "Field 6",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f7",
+          "label": "Field 7",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f8",
+          "label": "Field 8",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f9",
+          "label": "Field 9",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f10",
+          "label": "Field 10",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f11",
+          "label": "Field 11",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f12",
+          "label": "Field 12",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f13",
+          "label": "Field 13",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f14",
+          "label": "Field 14",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f15",
+          "label": "Field 15",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f16",
+          "label": "Field 16",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f17",
+          "label": "Field 17",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f18",
+          "label": "Field 18",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f19",
+          "label": "Field 19",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f20",
+          "label": "Field 20",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f21",
+          "label": "Field 21",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f22",
+          "label": "Field 22",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f23",
+          "label": "Field 23",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f24",
+          "label": "Field 24",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "f25",
+          "label": "Field 25",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "education",
+      "name": "Education Log",
+      "copy_fields_from": "main"
+    }
+  ],
+  "routing_rules": [],
+  "reminders": [],
+  "alerts": [
+    {
+      "on": "new_entry",
+      "when_entered_by": "contributor",
+      "notify": [
+        "owner"
+      ]
+    }
+  ]
+}

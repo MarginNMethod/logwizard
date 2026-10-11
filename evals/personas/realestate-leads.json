@@ -1,0 +1,32 @@
+{
+  "id": "realestate-leads",
+  "title": "Real estate agent tracking leads",
+  "browser_time_zone": "America/Los_Angeles",
+  "answers": {
+    "q1_interaction_kinds": "clients and leads",
+    "q2_system_name": "Lead Tracker",
+    "q3_details": "Lead name, phone, email, source (Zillow, referral, open house, sign call), budget, property interest, last contact date, next call date, status (new, warm, hot, closed), notes",
+    "q4_areas": "Buyers, Sellers",
+    "q5_multi_area_copy": "A lead can be both, so yes, show them in both lists.",
+    "q6_contributors": "Nobody else, just me and my assistant Dana Cruz (dana.cruz@example.com)",
+    "q7_contributor_alert": "Yes, tell me when Dana adds a lead.",
+    "q8_follow_up": "Yes, remind me the same day as the next call date.",
+    "q9_weekly_digest": "No weekly email, I get too many.",
+    "q10_time_zone": "Pacific"
+  },
+  "expected": {
+    "log_count": 3,
+    "has_routing": true,
+    "routing_areas": ["Buyers", "Sellers"],
+    "has_weekly_digest": false,
+    "weekly_digest_day": null,
+    "follow_up_reminder_days": 0,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 1,
+    "time_zone": "America/Los_Angeles",
+    "field_labels_required": ["Lead name", "Phone", "Email", "Source", "Budget", "Property interest", "Last contact date", "Next call date", "Status", "Notes"],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "Same-day reminder means days_before = 0. The owner is not a contributor, so contributor_count is 1 (Dana only). Status and Source are choice fields; Budget may be number or text."
+  }
+}

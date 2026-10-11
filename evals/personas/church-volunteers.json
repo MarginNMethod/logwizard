@@ -1,0 +1,32 @@
+{
+  "id": "church-volunteers",
+  "title": "Church volunteer coordinator",
+  "browser_time_zone": "America/Denver",
+  "answers": {
+    "q1_interaction_kinds": "volunteers",
+    "q2_system_name": "Volunteer Check-ins",
+    "q3_details": "Volunteer name, phone, email, ministry, date contacted, how contacted (text is not needed, just note call or email), availability, notes",
+    "q4_areas": "Children's Ministry, Hospitality, Music, Outreach",
+    "q5_multi_area_copy": "Yes, each ministry should have its own list.",
+    "q6_contributors": "Ruth Alvarez (ruth.alvarez@example.com), Tom Becker (tom.becker@example.com), Grace Okafor (grace.okafor@example.com)",
+    "q7_contributor_alert": "Yes please, email me when any of them adds someone.",
+    "q8_follow_up": "No follow-up dates needed.",
+    "q9_weekly_digest": "Yes, Sunday evening at 7pm.",
+    "q10_time_zone": "Mountain time"
+  },
+  "expected": {
+    "log_count": 5,
+    "has_routing": true,
+    "routing_areas": ["Children's Ministry", "Hospitality", "Music", "Outreach"],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "SUN",
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 3,
+    "time_zone": "America/Denver",
+    "field_labels_required": ["Volunteer name", "Phone", "Email", "Ministry", "Date contacted", "How contacted", "Availability", "Notes"],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "No follow_up_due reminder must be emitted (follow_up_reminder_days is null). Digest send_hour is 19. The text-message mention in q3 is a negation, not a request, so must_refuse stays empty and the plan must not list it as unsupported."
+  }
+}

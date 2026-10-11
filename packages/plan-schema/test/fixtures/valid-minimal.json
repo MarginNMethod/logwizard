@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "system_name": "Tiny Log",
+  "time_zone": "UTC",
+  "owner": {
+    "name": "Sample Owner",
+    "email": "owner@example.com"
+  },
+  "logs": [
+    {
+      "id": "main",
+      "name": "Main",
+      "fields": [
+        {
+          "key": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

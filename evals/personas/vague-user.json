@@ -1,0 +1,33 @@
+{
+  "id": "vague-user",
+  "title": "Vague user with minimal answers",
+  "browser_time_zone": "America/New_York",
+  "answers": {
+    "q1_interaction_kinds": "other, just people I talk to",
+    "q2_system_name": "",
+    "q3_details": "the usual stuff",
+    "q4_areas": "not sure",
+    "q5_multi_area_copy": "",
+    "q6_contributors": "maybe later",
+    "q7_contributor_alert": "",
+    "q8_follow_up": "I guess so?",
+    "q9_weekly_digest": "",
+    "q10_time_zone": ""
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": false,
+    "weekly_digest_day": null,
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": false,
+    "contributor_count": 0,
+    "time_zone": "America/New_York",
+    "field_labels_required": [],
+    "must_refuse": [],
+    "max_follow_up_questions": 2,
+    "notes": "Planner may ask at most two follow-up questions in total (for example the system name and how many days ahead to remind). If it ends up emitting a plan from these answers it should use sensible defaults: a single log with a handful of generic fields (for example name, contact info, date, notes), a name derived from q1, the browser time zone, and NO routing, digest, or alert. 'I guess so?' is ambiguous, so a follow_up_due reminder is allowed but not required; if one is emitted it must reference a real date field. The diff treats follow_up_reminder_days null or any value 1 to 7 as acceptable for this persona only (see acceptable_follow_up_reminder_days).",
+    "acceptable_follow_up_reminder_days": [null, 1, 2, 3, 7]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "eight-areas",
+  "title": "User with 8 areas (exceeds the 6 log limit)",
+  "browser_time_zone": "America/Chicago",
+  "answers": {
+    "q1_interaction_kinds": "employers",
+    "q2_system_name": "Industry Partner Log",
+    "q3_details": "Company, contact name, contact email, interaction type, date, industry, follow-up date, notes",
+    "q4_areas": "Healthcare, Technology, Finance, Education, Manufacturing, Retail, Government, Nonprofit",
+    "q5_multi_area_copy": "Yes, each industry gets its own log.",
+    "q6_contributors": "Alex Kim (alex.kim@example.com), Casey Nguyen (casey.nguyen@example.com)",
+    "q7_contributor_alert": "Yes, notify me.",
+    "q8_follow_up": "Yes, 1 day before.",
+    "q9_weekly_digest": "Yes, Thursday at 8am.",
+    "q10_time_zone": "America/Chicago"
+  },
+  "expected": {
+    "log_count": 6,
+    "has_routing": true,
+    "routing_areas": ["Healthcare", "Technology", "Finance", "Education", "Manufacturing"],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "THU",
+    "follow_up_reminder_days": 1,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 2,
+    "time_zone": "America/Chicago",
+    "field_labels_required": ["Company", "Contact name", "Contact email", "Interaction type", "Date", "Industry", "Follow-up date", "Notes"],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "max_logs": 6,
+    "notes": "Documented behavior for exceeding the log limit: the schema allows at most 6 logs. One main log plus one routed log per area gives 9, which is too many. The planner keeps the main log plus the first 5 areas in the order given (Healthcare, Technology, Finance, Education, Manufacturing), routes only those, and keeps ALL 8 industries as options on the Industry multi_choice field in the main log so no data is lost. The 3 unrouted areas (Retail, Government, Nonprofit) are listed in unsupported_requests with the reason (limit of 6 logs). The planner must not exceed 6 logs and must not silently drop the extra areas without mention. The planner may instead ask one follow-up question about which areas matter most; if it does, it must still emit a valid plan by the end of the follow-up budget using the first-five rule."
+  }
+}

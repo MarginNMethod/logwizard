@@ -1,0 +1,33 @@
+{
+  "id": "forty-fields",
+  "title": "User listing 40 fields (capped to 25)",
+  "browser_time_zone": "America/New_York",
+  "answers": {
+    "q1_interaction_kinds": "vendors",
+    "q2_system_name": "Vendor Master Log",
+    "q3_details": "Vendor name, Contact, Email, Phone, Fax, Address, City, State, Zip, Country, Website, Category, Rating, Contract start, Contract end, Terms, Insurance, Tax ID, Bank, Account rep, Rep phone, Rep email, Lead time, Min order, Discount, Region, Certs, Audit date, Audit score, Risk, Notes, Last PO, Last invoice, Open balance, Currency, Payment method, Ship method, Return policy, Status, Owner",
+    "q4_areas": "No.",
+    "q5_multi_area_copy": "Not applicable.",
+    "q6_contributors": "Just me.",
+    "q7_contributor_alert": "No.",
+    "q8_follow_up": "No.",
+    "q9_weekly_digest": "No.",
+    "q10_time_zone": "America/New_York"
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": false,
+    "weekly_digest_day": null,
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": false,
+    "contributor_count": 0,
+    "time_zone": "America/New_York",
+    "field_labels_required": ["Vendor name", "Contact", "Email", "Phone", "Fax", "Address", "City", "State", "Zip", "Country", "Website", "Category", "Rating", "Contract start", "Contract end", "Terms", "Insurance", "Tax ID", "Bank", "Account rep", "Rep phone", "Rep email", "Lead time", "Min order", "Discount"],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "max_fields_per_log": 25,
+    "notes": "The user listed 40 fields; the schema allows 25 per log. Expected behavior: keep the first 25 in the order given, omit the remaining 15 (Region through Owner), and list the omitted labels in unsupported_requests with a short reason (field limit). The plan must never exceed 25 fields. Splitting into more logs is NOT expected because the user did not ask for multiple logs. The planner may rename a label slightly (for example 'Vendor name' as the first field), and 'Tax ID' and 'Bank' are plain text fields; the planner should not refuse them."
+  }
+}

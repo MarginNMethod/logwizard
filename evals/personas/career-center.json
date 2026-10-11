@@ -1,0 +1,32 @@
+{
+  "id": "career-center",
+  "title": "University career center tracking employer outreach",
+  "browser_time_zone": "America/Chicago",
+  "answers": {
+    "q1_interaction_kinds": "employers",
+    "q2_system_name": "Employer Outreach Log",
+    "q3_details": "Organization name, contact email, interaction type (email, call, meeting, event), date, area, follow-up date, notes",
+    "q4_areas": "Education, Psychology, Arts",
+    "q5_multi_area_copy": "Yes, if an entry has more than one area it should show up in each area's own log.",
+    "q6_contributors": "Sample Rep (rep@example.com)",
+    "q7_contributor_alert": "Yes, email me when Sample Rep adds an entry.",
+    "q8_follow_up": "Yes, remind me 1 day before the follow-up date.",
+    "q9_weekly_digest": "Yes, Monday at 8am.",
+    "q10_time_zone": "America/Chicago"
+  },
+  "expected": {
+    "log_count": 4,
+    "has_routing": true,
+    "routing_areas": ["Education", "Psychology", "Arts"],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "MON",
+    "follow_up_reminder_days": 1,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 1,
+    "time_zone": "America/Chicago",
+    "field_labels_required": ["Organization", "Contact email", "Interaction type", "Date", "Area", "Follow-up date", "Notes"],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "Reference persona; mirrors the example plan in PLAN.md section 4. Labels may differ slightly in wording; the diff matches labels case-insensitively and ignores punctuation. Log count is one main log plus one per routed area."
+  }
+}

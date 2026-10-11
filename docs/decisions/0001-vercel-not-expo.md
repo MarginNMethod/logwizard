@@ -12,7 +12,7 @@ Use Next.js on Vercel.
 - Mobile apps are out of scope.
 - The interview and preview are a desktop-friendly web flow.
 - Vercel gives preview URLs for each pull request, so each gate can be reviewed from a link.
-- Vercel provides environment variable management and bot protection for the paid AI endpoint.
+- Vercel Hobby is free and provides environment variable management, which keeps the project within the zero-cost rule (decision 0005).
 
 ## Consequences
 The app is web only. Revisit if a mobile need appears.

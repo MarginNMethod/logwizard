@@ -179,7 +179,7 @@ Everything depends on this. Define it once in `packages/plan-schema` and use it 
 - Every `date_field` points to a `date` field in the reminder's `log`.
 - Every `notify` target is `owner`, `contributors`, or an email listed in the plan.
 - Emails must be valid. `send_hour` is 0 to 23.
-- No free-form code, formulas, or scripts anywhere in the plan. Plan text (names, labels, options) is plain text only. Reject strings that start with `=` or `@`, strings that start with `+` or `-` followed by a digit or `(`, and strings containing control characters. Ordinary labels such as "- Other -" or "+1 phone" style text can be handled by trimming, not by rejection; decide the exact rule in Phase 1 with test cases.
+- No free-form code, formulas, or scripts anywhere in the plan. Plan text is plain text only. The exact text-safety rule and the other Phase 1 choices are in `docs/decisions/0006-schema-ambiguities.md`.
 - Length caps on every string (for example 80 characters for names and labels, 60 for options).
 
 Write unit tests for every rule, with a passing and failing fixture for each.

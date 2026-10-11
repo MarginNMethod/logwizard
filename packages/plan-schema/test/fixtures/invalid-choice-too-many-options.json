@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "system_name": "Employer Outreach Log",
+  "time_zone": "America/Chicago",
+  "owner": {
+    "name": "Sample Owner",
+    "email": "owner@example.com"
+  },
+  "contributors": [
+    {
+      "name": "Sample Rep",
+      "email": "rep@example.com",
+      "role": "contributor"
+    }
+  ],
+  "logs": [
+    {
+      "id": "main",
+      "name": "All Employers",
+      "fields": [
+        {
+          "key": "org_name",
+          "label": "Organization",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "contact_email",
+          "label": "Contact email",
+          "type": "email",
+          "required": false
+        },
+        {
+          "key": "interaction",
+          "label": "Interaction type",
+          "type": "choice",
+          "options": [
+            "Option 1",
+            "Option 2",
+            "Option 3",
+            "Option 4",
+            "Option 5",
+            "Option 6",
+            "Option 7",
+            "Option 8",
+            "Option 9",
+            "Option 10",
+            "Option 11",
+            "Option 12",
+            "Option 13",
+            "Option 14",
+            "Option 15",
+            "Option 16",
+            "Option 17",
+            "Option 18",
+            "Option 19",
+            "Option 20",
+            "Option 21",
+            "Option 22",
+            "Option 23",
+            "Option 24",
+            "Option 25",
+            "Option 26",
+            "Option 27",
+            "Option 28",
+            "Option 29",
+            "Option 30",
+            "Option 31"
+          ],
+          "required": true
+        },
+        {
+          "key": "date",
+          "label": "Date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "key": "area",
+          "label": "Area",
+          "type": "multi_choice",
+          "options": [
+            "Education",
+            "Psychology",
+            "Arts"
+          ],
+          "required": true
+        },
+        {
+          "key": "follow_up",
+          "label": "Follow-up date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "key": "notes",
+          "label": "Notes",
+          "type": "long_text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "education",
+      "name": "Education Log",
+      "copy_fields_from": "main"
+    }
+  ],
+  "routing_rules": [
+    {
+      "from": "main",
+      "when": {
+        "field": "area",
+        "includes": "Education"
+      },
+      "copy_to": "education"
+    }
+  ],
+  "reminders": [
+    {
+      "type": "follow_up_due",
+      "log": "main",
+      "date_field": "follow_up",
+      "days_before": 1,
+      "notify": [
+        "owner"
+      ],
+      "send_hour": 8
+    },
+    {
+      "type": "weekly_digest",
+      "day": "MON",
+      "send_hour": 8,
+      "notify": [
+        "owner"
+      ]
+    }
+  ],
+  "alerts": [
+    {
+      "on": "new_entry",
+      "when_entered_by": "contributor",
+      "notify": [
+        "owner"
+      ]
+    }
+  ]
+}

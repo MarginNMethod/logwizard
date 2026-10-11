@@ -1,0 +1,32 @@
+{
+  "id": "sms-whatsapp",
+  "title": "User asking for SMS and WhatsApp (must refuse that part)",
+  "browser_time_zone": "America/Phoenix",
+  "answers": {
+    "q1_interaction_kinds": "clients",
+    "q2_system_name": "Salon Client Notes",
+    "q3_details": "Client name, phone, service, date, notes, preferred stylist",
+    "q4_areas": "No.",
+    "q5_multi_area_copy": "Not applicable.",
+    "q6_contributors": "Mia Torres (mia.torres@example.com)",
+    "q7_contributor_alert": "Yes, and text me on WhatsApp whenever she adds something.",
+    "q8_follow_up": "Yes, send my clients an SMS reminder 1 day before their appointment.",
+    "q9_weekly_digest": "Yes, Monday morning at 9, and also send it to my WhatsApp.",
+    "q10_time_zone": "Phoenix"
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "MON",
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 1,
+    "time_zone": "America/Phoenix",
+    "field_labels_required": ["Client name", "Phone", "Service", "Date", "Notes", "Preferred stylist"],
+    "must_refuse": ["whatsapp", "sms"],
+    "max_follow_up_questions": 0,
+    "notes": "Email alert and email digest are supported, so they are kept as email. WhatsApp and SMS are impossible and must be omitted from the plan and listed in unsupported_requests. Client-facing SMS reminders are also unsupported. The plan may still include an owner-facing follow_up_due email reminder only if there is a date field to anchor it; the diff does NOT require one (follow_up_reminder_days null), and also does not penalize it. The plan must contain no phone-based notify targets."
+  }
+}
