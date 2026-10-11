@@ -5,8 +5,11 @@ export function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function control(f: PlanField): string {
-  const name = `name="${esc(f.key)}" data-type="${f.type}"${f.required ? " required" : ""}`;
+/** Element id for a field's control, unique across logs. */
+const fieldId = (logId: string, key: string): string => `f_${logId}_${key}`.replace(/[^A-Za-z0-9_-]/g, "_");
+
+function control(f: PlanField, id: string): string {
+  const name = `id="${esc(id)}" name="${esc(f.key)}" data-type="${f.type}"${f.required ? ' required aria-required="true"' : ""}`;
   const opts = f.options ?? [];
   switch (f.type) {
     case "long_text":
@@ -26,8 +29,8 @@ function control(f: PlanField): string {
     case "yes_no":
       return `<select ${name}><option value=""></option><option value="Yes">Yes</option><option value="No">No</option></select>`;
     case "multi_choice":
-      return `<div class="multi" data-name="${esc(f.key)}" data-type="multi_choice">${opts
-        .map((o) => `<label class="opt"><input type="checkbox" value="${esc(o)}"> ${esc(o)}</label>`)
+      return `<div class="multi" id="${esc(id)}" data-name="${esc(f.key)}" data-type="multi_choice">${opts
+        .map((o, i) => `<label class="opt" for="${esc(id)}_${i}"><input type="checkbox" id="${esc(id)}_${i}" value="${esc(o)}"> ${esc(o)}</label>`)
         .join("")}</div>`;
     default:
       return `<input type="text" ${name}>`;
@@ -40,23 +43,31 @@ export function buildSidebarHtml(plan: Plan): string {
   const sections = bases
     .map((log, i) => {
       const rows = logFields(plan, log.id)
-        .map((f) => `<div class="row"><label>${esc(f.label)}${f.required ? " *" : ""}</label>${control(f)}</div>`)
+        .map((f) => {
+          const id = fieldId(log.id, f.key);
+          const star = f.required ? ' <span class="req">* required</span>' : "";
+          if (f.type === "multi_choice") {
+            return `<fieldset class="row"><legend>${esc(f.label)}${star}</legend>${control(f, id)}</fieldset>`;
+          }
+          return `<div class="row"><label for="${esc(id)}">${esc(f.label)}${star}</label>${control(f, id)}</div>`;
+        })
         .join("");
       return `<form class="entry" data-log="${esc(log.id)}"${i === 0 ? "" : " hidden"}>${rows}</form>`;
     })
     .join("");
   const picker =
     bases.length > 1
-      ? `<div class="row"><label>Log</label><select id="logpick">${bases.map((l) => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</select></div>`
+      ? `<div class="row"><label for="logpick">Log</label><select id="logpick">${bases.map((l) => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</select></div>`
       : "";
   return `<!DOCTYPE html><html><head><base target="_top"><style>
 body{font-family:Arial,sans-serif;font-size:13px;margin:12px}
 .row{margin-bottom:10px}label{display:block;font-weight:bold;margin-bottom:3px}
+fieldset{border:0;margin:0 0 10px;padding:0}legend{font-weight:bold;margin-bottom:3px;padding:0}.req{font-weight:normal;color:#444}
 .opt{font-weight:normal}input[type=text],input[type=email],input[type=url],input[type=tel],input[type=date],select,textarea{width:100%;box-sizing:border-box}
 button{padding:6px 14px}#msg{margin-top:10px;white-space:pre-wrap}.err{color:#b00020}.ok{color:#146c2e}
 </style></head><body>
 <h3>${esc(plan.system_name)}: add entry</h3>${picker}${sections}
-<button id="save">Save entry</button><div id="msg" role="status"></div>
+<button id="save">Save entry</button><div id="msg" role="status" aria-live="polite"></div>
 <script>
 (function(){
   var pick=document.getElementById('logpick');

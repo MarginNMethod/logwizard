@@ -44,6 +44,10 @@ export interface FormInfo {
   created: boolean;
   /** Titles of questions added to an already existing form. Existing questions and responses are never removed. */
   addedItems: string[];
+  /** Titles of existing questions whose choices or required flag were brought back in line with the plan. */
+  updatedItems: string[];
+  /** True when the form is set to collect VERIFIED respondent emails (not typed in by the respondent). */
+  verifiedEmail: boolean;
 }
 
 export type TriggerKind = "time" | "form";
@@ -73,12 +77,17 @@ export interface Services {
   ensureLogTab(spec: LogTabSpec): LogTabResult;
   /** Create the Setup or Activity tab if missing. Headers are written only to an empty tab. */
   ensureInfoTab(name: "Setup" | "Activity", headers: string[]): void;
+  /** Heading row of a tab with trailing blanks removed, or null when the tab is missing or has no headings. */
+  readHeaders(tab: string): string[] | null;
+  /** Add heading cells after the last existing heading. Never changes existing headings or data. */
+  appendHeaders(tab: string, extra: string[]): void;
   /** Data rows (header excluded) as plain text. Dates come back as YYYY-MM-DD. Missing tab gives []. */
   readRows(tab: string): string[][];
   /** Append rows below the last row. Implementations set the range format to plain text "@" before writing. */
   appendRows(tab: string, rows: string[][]): void;
   /** Replace the contents of the Setup tab (it belongs to the engine, not to the user). */
   replaceSetup(rows: string[][]): void;
+  /** Run fn under the script lock (one wait, throws "Lock timeout..." when busy). Callers must not nest it. */
   withLock<T>(fn: () => T): T;
 
   // Script properties
@@ -96,7 +105,12 @@ export interface Services {
   createHourlyTrigger(handler: string): void;
   createFormSubmitTrigger(formId: string, handler: string): void;
 
+  /** Form responses submitted at or after sinceIso, as the trigger would have delivered them. */
+  listFormResponses(formId: string, sinceIso: string): FormSubmission[];
+
   // Mail and UI
+  /** MailApp.getRemainingDailyQuota(). */
+  remainingQuota(): number;
   sendMail(to: string, subject: string, body: string): void;
   showSidebar(title: string, html: string): void;
   alert(title: string, message: string): void;

@@ -1,6 +1,6 @@
 import { makePlan } from "../../packages/engine-logic/test/fixture.js";
 import type { Plan } from "@logwizard/engine-logic";
-import type { FormInfo, FormSpec, LogTabSpec, MenuItem, Services, TriggerInfo } from "../src/services.js";
+import type { FormInfo, FormSpec, FormSubmission, LogTabSpec, MenuItem, Services, TriggerInfo } from "../src/services.js";
 
 export { makePlan };
 
@@ -19,6 +19,18 @@ export class FakeServices implements Services {
   sidebars: { title: string; html: string }[] = [];
   menu: { name: string; items: (MenuItem | "separator")[] } | null = null;
   lockCalls = 0;
+  /** True while the script lock is held. A second withLock while held fails like a real lock timeout. */
+  locked = false;
+  /** Number of upcoming withLock calls that fail with a lock timeout. */
+  lockFailures = 0;
+  /** Remaining MailApp quota. */
+  quota = 10000;
+  /** What ensureForm reports for verified email collection. */
+  verifiedEmail = true;
+  /** Form responses by form id, as a real form would hold them. */
+  responses = new Map<string, FormSubmission[]>();
+  /** Runs inside sendMail, to simulate other work happening while a send is in progress. */
+  onSend: ((mail: Mail) => void) | null = null;
   tz = "";
   nowValue = new Date("2026-03-01T15:00:00Z"); // 09:00 in America/Chicago
   user = "";
@@ -54,6 +66,18 @@ export class FakeServices implements Services {
   ensureInfoTab(name: string, headers: string[]) {
     if (!this.tabs.has(name)) this.tabs.set(name, [headers]);
   }
+  readHeaders(tab: string) {
+    const t = this.tabs.get(tab);
+    if (!t || !t[0]) return null;
+    const h = [...t[0]];
+    while (h.length && h[h.length - 1] === "") h.pop();
+    return h.length ? h : null;
+  }
+  appendHeaders(tab: string, extra: string[]) { this.tabs.get(tab)![0]!.push(...extra); }
+  remainingQuota = () => this.quota;
+  listFormResponses(formId: string, sinceIso: string): FormSubmission[] {
+    return (this.responses.get(formId) ?? []).filter((r) => r.timestamp >= sinceIso);
+  }
   readRows(tab: string) { return (this.tabs.get(tab) ?? []).slice(1).map((r) => [...r]); }
   appendRows(tab: string, rows: string[][]) {
     const t = this.tabs.get(tab);
@@ -62,7 +86,19 @@ export class FakeServices implements Services {
     for (const r of rows) t.push([...r]);
   }
   replaceSetup(rows: string[][]) { this.tabs.set("Setup", rows); }
-  withLock<T>(fn: () => T): T { this.lockCalls++; return fn(); }
+  withLock<T>(fn: () => T): T {
+    this.lockCalls++;
+    if (this.locked || this.lockFailures > 0) {
+      if (this.lockFailures > 0) this.lockFailures--;
+      throw new Error("Lock timeout: another process was holding the lock for too long.");
+    }
+    this.locked = true;
+    try {
+      return fn();
+    } finally {
+      this.locked = false;
+    }
+  }
 
   getProp = (k: string) => this.props.get(k) ?? null;
   setProp = (k: string, v: string) => void this.props.set(k, v);
@@ -71,11 +107,19 @@ export class FakeServices implements Services {
 
   ensureForm(spec: FormSpec, existingId: string | null): FormInfo {
     const found = existingId ? this.forms.find((f) => f.id === existingId) : undefined;
-    if (found) return { id: found.id, url: found.url, created: false, addedItems: [] };
+    if (found) {
+      const old = new Map(found.spec.items.map((i) => [i.title, i]));
+      const addedItems = spec.items.filter((i) => !old.has(i.title)).map((i) => i.title);
+      const updatedItems = spec.items
+        .filter((i) => old.has(i.title) && (old.get(i.title)!.required !== i.required || (old.get(i.title)!.options ?? []).join("|") !== (i.options ?? []).join("|")))
+        .map((i) => i.title);
+      found.spec = spec;
+      return { id: found.id, url: found.url, created: false, addedItems, updatedItems, verifiedEmail: this.verifiedEmail };
+    }
     const id = `form-${this.forms.length + 1}`;
     const f = { id, spec, url: `https://forms.example.com/${id}` };
     this.forms.push(f);
-    return { id, url: f.url, created: true, addedItems: [] };
+    return { id, url: f.url, created: true, addedItems: [], updatedItems: [], verifiedEmail: this.verifiedEmail };
   }
 
   listTriggers = () => this.triggers.map(({ id, handler, kind }) => ({ id, handler, kind }));
@@ -85,7 +129,13 @@ export class FakeServices implements Services {
 
   sendMail(to: string, subject: string, body: string) {
     if (this.failMail) throw new Error("mail down");
-    this.mails.push({ to, subject, body });
+    const mail = { to, subject, body };
+    this.mails.push(mail);
+    const hook = this.onSend;
+    if (hook) {
+      this.onSend = null; // run once
+      hook(mail);
+    }
   }
   showSidebar(title: string, html: string) { this.sidebars.push({ title, html }); }
   alert(title: string, message: string) { this.alerts.push({ title, message }); }

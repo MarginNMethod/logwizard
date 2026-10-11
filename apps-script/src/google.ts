@@ -42,6 +42,56 @@ function tune<T extends { setTitle(t: string): T; setRequired(b: boolean): T; se
   return it;
 }
 
+/** Bring an existing question's required flag and choices back in line with the spec. Returns true when something changed. */
+function refreshItem(item: GoogleAppsScript.Forms.Item, s: FormItemSpec): boolean {
+  let changed = false;
+  const opts = s.kind === "yes_no" ? ["Yes", "No"] : s.options ?? [];
+  const setRequired = (it: { isRequired(): boolean; setRequired(b: boolean): unknown }) => {
+    if (it.isRequired() !== s.required) {
+      it.setRequired(s.required);
+      changed = true;
+    }
+  };
+  const setChoices = (it: { getChoices(): GoogleAppsScript.Forms.Choice[]; setChoiceValues(v: string[]): unknown }) => {
+    if (it.getChoices().map((c) => c.getValue()).join("\u0001") !== opts.join("\u0001")) {
+      it.setChoiceValues(opts);
+      changed = true;
+    }
+  };
+  switch (item.getType()) {
+    case FormApp.ItemType.LIST: {
+      const it = item.asListItem();
+      setRequired(it);
+      setChoices(it);
+      break;
+    }
+    case FormApp.ItemType.CHECKBOX: {
+      const it = item.asCheckboxItem();
+      setRequired(it);
+      setChoices(it);
+      break;
+    }
+    case FormApp.ItemType.MULTIPLE_CHOICE: {
+      const it = item.asMultipleChoiceItem();
+      setRequired(it);
+      setChoices(it);
+      break;
+    }
+    case FormApp.ItemType.TEXT:
+      setRequired(item.asTextItem());
+      break;
+    case FormApp.ItemType.PARAGRAPH_TEXT:
+      setRequired(item.asParagraphTextItem());
+      break;
+    case FormApp.ItemType.DATE:
+      setRequired(item.asDateItem());
+      break;
+    default:
+      break;
+  }
+  return changed;
+}
+
 function addItem(form: GoogleAppsScript.Forms.Form, s: FormItemSpec): void {
   const opts = s.options ?? [];
   switch (s.kind) {
@@ -76,6 +126,14 @@ export function createGoogleServices(): Services {
     if (v === null || v === undefined) return "";
     if (v instanceof Date) return Utilities.formatDate(v, ss().getSpreadsheetTimeZone(), "yyyy-MM-dd");
     return String(v);
+  };
+
+  const headersOf = (tab: string): string[] | null => {
+    const sh = ss().getSheetByName(tab);
+    if (!sh || sh.getLastColumn() < 1) return null;
+    const h = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]!.map((c) => String(c ?? ""));
+    while (h.length && h[h.length - 1] === "") h.pop();
+    return h.length ? h : null;
   };
 
   return {
@@ -123,6 +181,13 @@ export function createGoogleServices(): Services {
         sh.setFrozenRows(1);
       }
     },
+    readHeaders: (tab) => headersOf(tab),
+    appendHeaders(tab, extra) {
+      const sh = ss().getSheetByName(tab);
+      if (!sh || extra.length === 0) return;
+      const at = headersOf(tab)?.length ?? 0;
+      sh.getRange(1, at + 1, 1, extra.length).setNumberFormat("@").setValues([extra]).setFontWeight("bold");
+    },
     readRows(tab) {
       const sh = ss().getSheetByName(tab);
       if (!sh || sh.getLastRow() < 2) return [];
@@ -148,8 +213,10 @@ export function createGoogleServices(): Services {
       sh.autoResizeColumns(1, data[0]!.length);
     },
     withLock<T>(fn: () => T): T {
-      const lock = LockService.getDocumentLock();
-      lock.waitLock(30000);
+      // The script lock exists in every context (the document lock can be null in some trigger contexts).
+      // One wait here; core.ts retries a busy lock a few times.
+      const lock = LockService.getScriptLock();
+      lock.waitLock(10000);
       try {
         return fn();
       } finally {
@@ -175,17 +242,36 @@ export function createGoogleServices(): Services {
       if (!form) {
         form = FormApp.create(spec.title);
         form.setDescription(spec.description);
-        form.setCollectEmail(true);
         form.setConfirmationMessage("Thanks. Your entry was recorded.");
       }
-      const have = new Set(form.getItems().map((i) => i.getTitle().trim().toLowerCase()));
+      // Ask Google to verify the respondent email (the respondent cannot type someone else's). Set on every
+      // activation so older forms get it too. Not every runtime has the call, so check before using it.
+      let verifiedEmail = false;
+      try {
+        const types = (FormApp as unknown as { EmailCollectionType?: { VERIFIED?: unknown } }).EmailCollectionType;
+        const f = form as unknown as { setEmailCollectionType?: (t: unknown) => unknown; setCollectEmail(b: boolean): unknown };
+        if (types?.VERIFIED !== undefined && typeof f.setEmailCollectionType === "function") {
+          f.setEmailCollectionType(types.VERIFIED);
+          verifiedEmail = true;
+        } else {
+          f.setCollectEmail(true);
+        }
+      } catch {
+        form.setCollectEmail(true);
+      }
+      const existing = new Map(form.getItems().map((i) => [i.getTitle().trim().toLowerCase(), i]));
       const addedItems: string[] = [];
+      const updatedItems: string[] = [];
       for (const item of spec.items) {
-        if (have.has(item.title.trim().toLowerCase())) continue;
+        const found = existing.get(item.title.trim().toLowerCase());
+        if (found) {
+          if (refreshItem(found, item)) updatedItems.push(item.title);
+          continue;
+        }
         addItem(form, item);
         if (!created) addedItems.push(item.title);
       }
-      return { id: form.getId(), url: form.getPublishedUrl(), created, addedItems };
+      return { id: form.getId(), url: form.getPublishedUrl(), created, addedItems, updatedItems, verifiedEmail };
     },
 
     listTriggers(): TriggerInfo[] {
@@ -206,6 +292,11 @@ export function createGoogleServices(): Services {
     },
 
     sendMail: (to, subject, body) => MailApp.sendEmail(to, subject, body),
+    remainingQuota: () => MailApp.getRemainingDailyQuota(),
+    listFormResponses(formId, sinceIso) {
+      const form = FormApp.openById(formId);
+      return form.getResponses(new Date(sinceIso)).map((r) => parseResponse(formId, r));
+    },
     showSidebar(title, html) {
       SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutput(html).setTitle(title));
     },
@@ -223,18 +314,22 @@ export function createGoogleServices(): Services {
   };
 }
 
-/** Turn the Forms submit event into plain data. */
-export function parseFormEvent(e: GoogleAppsScript.Events.FormsOnFormSubmit): FormSubmission {
+/** Turn a Forms response into plain data. Same shape for the live trigger event and the catch-up import. */
+function parseResponse(formId: string, response: GoogleAppsScript.Forms.FormResponse): FormSubmission {
   const answers: Record<string, string | string[]> = {};
-  for (const ir of e.response.getItemResponses()) {
+  for (const ir of response.getItemResponses()) {
     const r = ir.getResponse();
     answers[ir.getItem().getTitle()] = Array.isArray(r) ? (r as unknown[]).map((x) => String(x)) : String(r ?? "");
   }
   return {
-    formId: e.source.getId(),
-    responseId: e.response.getId(),
-    timestamp: e.response.getTimestamp().toISOString(),
-    email: e.response.getRespondentEmail() || "",
+    formId,
+    responseId: response.getId(),
+    timestamp: response.getTimestamp().toISOString(),
+    email: response.getRespondentEmail() || "",
     answers,
   };
+}
+
+export function parseFormEvent(e: GoogleAppsScript.Events.FormsOnFormSubmit): FormSubmission {
+  return parseResponse(e.source.getId(), e.response);
 }

@@ -13,6 +13,7 @@ import {
   logFields,
   makeEntryId,
   normaliseEntry,
+  normaliseValue,
   planRouting,
   planSends,
   sanitizeCellValue,
@@ -35,10 +36,105 @@ export const TRIGGER_INVENTORY = [
   { name: "form_submit", handler: "onFormSubmit", kind: "form" },
 ] as const;
 
+const IMPORT_FROM_PROP = "importFrom";
+const ALERT_DAY_PROP = "alertDay";
+const ALERT_HOUR_PROP = "alertHour";
+const ALERT_NOTICE_PROP = "alertNotice";
+/** Alerts may use at most half of the day's emails and this many per hour, so reminders and digests always have room. */
+export const ALERTS_PER_HOUR = 10;
+const LOCK_ATTEMPTS = 3;
+const NAME_MAX = 80;
 const SENT_PREFIX = "sent:";
 const COUNT_PROP = "sendCount";
 const NOTICE_PROP = "capNotice";
 const formProp = (logId: string) => `formId:${logId}`;
+const verifiedProp = (formId: string) => `verified:${formId}`;
+
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+const isBusy = (e: unknown): boolean => /Lock timeout/.test(errText(e));
+
+/** Run fn under the script lock, retrying a busy lock a few times. Never nest calls. */
+function locked<T>(svc: Services, fn: () => T): T {
+  let last: unknown;
+  for (let i = 0; i < LOCK_ATTEMPTS; i++) {
+    try {
+      return svc.withLock(fn);
+    } catch (e) {
+      if (!isBusy(e)) throw e;
+      last = e;
+    }
+  }
+  throw last;
+}
+
+/** One warning per key per local day, so an hourly check cannot flood Activity. */
+function warnOnce(svc: Services, key: string, date: string, message: string): void {
+  if (svc.getProp(`warned:${key}`) === date) return;
+  svc.setProp(`warned:${key}`, date);
+  logActivity(svc, "warning", message);
+}
+
+/** Name of the built-in "who are you" question. Never equal to a plan field label (ignoring case). */
+export function nameQuestionTitle(plan: Plan, logId: string): string {
+  const labels = new Set(logFields(plan, logId).map((f) => f.label.trim().toLowerCase()));
+  let title = NAME_QUESTION;
+  for (let n = 1; labels.has(title.toLowerCase()); n++) title = n === 1 ? `${NAME_QUESTION} (contributor)` : `${NAME_QUESTION} (contributor ${n})`;
+  return title;
+}
+
+/** Text typed by a contributor: no control characters, one line, at most 80 characters. */
+export function cleanName(raw: unknown): string {
+  // eslint-disable-next-line no-control-regex
+  return String(raw ?? "").replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, NAME_MAX).trim();
+}
+
+// ---------- column layout (everything is read and written by heading name) ----------
+
+const same = (a: string, b: string) => a.trim() === b.trim();
+
+/** For each expected heading, the column of the tab that holds it, or null when one is missing. */
+function columnMap(actual: readonly string[], expected: readonly string[]): number[] | null {
+  const used = new Set<number>();
+  const map: number[] = [];
+  for (const h of expected) {
+    const i = actual.findIndex((a, j) => !used.has(j) && same(a, h));
+    if (i < 0) return null;
+    used.add(i);
+    map.push(i);
+  }
+  return map;
+}
+
+type Layout = { ok: true; map: number[]; width: number; headers: string[] } | { ok: false; message: string };
+
+function layoutFor(svc: Services, plan: Plan, log: PlanLog): Layout {
+  const actual = svc.readHeaders(log.name);
+  if (!actual) return { ok: false, message: `The tab "${log.name}" is missing or has no column headings, so nothing was written to or read from it. Run Activate again.` };
+  const want = headersForLog(plan, log.id);
+  const map = columnMap(actual, want);
+  if (!map) {
+    const missing = want.filter((h) => !actual.some((a) => same(a, h)));
+    return {
+      ok: false,
+      message: `The tab "${log.name}" is missing the column heading(s) ${missing.map((m) => `"${m}"`).join(", ")} that the plan expects, so nothing was written to or read from it. Rename the old tab (for example to "${log.name} old") and run Activate again.`,
+    };
+  }
+  return { ok: true, map, width: actual.length, headers: actual };
+}
+
+const alignRow = (cells: string[], lay: { map: number[]; width: number }): string[] => {
+  const out = Array<string>(lay.width).fill("");
+  cells.forEach((c, i) => {
+    out[lay.map[i]!] = c;
+  });
+  return out;
+};
+
+/** The engine's sanitiser prefixes an apostrophe to formula-like text. Log tabs are plain-text formatted, so drop it there. */
+const unprefix = (cell: string): string => (/^'(?:[ \u00a0]*[=+\-@]|[\t\r])/.test(cell) ? cell.slice(1) : cell);
 
 export type LoadResult = { ok: true; plan: Plan } | { ok: false; message: string };
 
@@ -92,7 +188,7 @@ const FORM_KIND: Record<PlanField["type"], FormItemSpec["kind"]> = {
 
 function formSpec(plan: Plan, log: PlanLog): FormSpec {
   const items: FormItemSpec[] = [
-    { title: NAME_QUESTION, kind: "text", required: true, help: "Used to record who entered this. Please use your own name." },
+    { title: nameQuestionTitle(plan, log.id), kind: "text", required: true, help: "Used to record who entered this. Please use your own name." },
     ...logFields(plan, log.id).map((f) => {
       const item: FormItemSpec = { title: f.label, kind: FORM_KIND[f.type], required: f.required };
       if (f.options) item.options = [...f.options];
@@ -109,6 +205,19 @@ export interface ActivateResult {
   message: string;
 }
 
+const isPrefix = (short: readonly string[], long: readonly string[]) => short.length <= long.length && short.every((h, i) => same(h, long[i]!));
+
+function headingProblem(log: PlanLog, have: readonly string[], want: readonly string[]): string {
+  const missing = want.filter((h) => !have.some((a) => same(a, h)));
+  const extra = have.filter((a) => !want.some((h) => same(a, h)));
+  const parts = [`The tab "${log.name}" has different column headings than the plan, so it was left as it is and nothing was set up for it. Your data was not changed.`];
+  if (missing.length) parts.push(`Missing from the tab: ${missing.map((m) => `"${m}"`).join(", ")}.`);
+  if (extra.length) parts.push(`In the tab but not in the plan: ${extra.map((m) => `"${m}"`).join(", ")}.`);
+  if (!missing.length && !extra.length) parts.push("The same headings are in a different order.");
+  parts.push(`To fix this, rename the old tab (for example to "${log.name} old") and run Activate again. A new tab with the right columns will be built. You can copy your old rows across.`);
+  return parts.join(" ");
+}
+
 export function activate(svc: Services): ActivateResult {
   const loaded = loadPlan(svc);
   if (!loaded.ok) {
@@ -120,41 +229,63 @@ export function activate(svc: Services): ActivateResult {
   svc.ensureInfoTab("Setup", ["Setting", "Value"]);
   svc.setSpreadsheetTimeZone(plan.time_zone);
 
+  const blocked = new Set<string>();
   for (const log of plan.logs) {
-    const r = svc.ensureLogTab({ name: log.name, headers: headersForLog(plan, log.id), rules: rulesFor(plan, log.id) });
-    if (r.headerMismatch) {
-      logActivity(svc, "warning", `The tab "${log.name}" already has different column headings, so it was left as it is. Your data was not changed.`);
+    const want = headersForLog(plan, log.id);
+    const have = svc.readHeaders(log.name);
+    if (have && !isPrefix(want, have)) {
+      if (isPrefix(have, want)) {
+        // A field was added at the end of the plan: add just the new headings. Existing columns and data stay put.
+        const extra = want.slice(have.length);
+        svc.appendHeaders(log.name, extra);
+        logActivity(svc, "info", `Added the new column heading(s) ${extra.map((e) => `"${e}"`).join(", ")} to the end of "${log.name}".`);
+      } else {
+        blocked.add(log.id);
+        logActivity(svc, "warning", headingProblem(log, have, want));
+        continue;
+      }
     }
+    svc.ensureLogTab({ name: log.name, headers: want, rules: rulesFor(plan, log.id) });
   }
 
   const forms: { log: PlanLog; url: string }[] = [];
-  const formIds: string[] = [];
-  for (const log of baseLogs(plan)) {
-    const info = svc.ensureForm(formSpec(plan, log), svc.getProp(formProp(log.id)));
-    svc.setProp(formProp(log.id), info.id);
-    forms.push({ log, url: info.url });
-    formIds.push(info.id);
-    if (info.addedItems.length) logActivity(svc, "info", `Added new questions to the form for "${log.name}": ${info.addedItems.join(", ")}.`);
-  }
-
-  // Remove only this engine's own old triggers, then install the inventory.
-  const own = new Set<string>(TRIGGER_INVENTORY.map((t) => t.handler));
-  for (const t of svc.listTriggers()) if (own.has(t.handler)) svc.deleteTrigger(t.id);
   let installed = 0;
-  for (const t of TRIGGER_INVENTORY) {
-    if (t.kind === "time") {
-      svc.createHourlyTrigger(t.handler);
-      installed++;
-    } else {
-      for (const id of formIds) {
-        svc.createFormSubmitTrigger(id, t.handler);
-        installed++;
+  const activatedAt = svc.now().toISOString();
+  locked(svc, () => {
+    const formIds: string[] = [];
+    for (const log of baseLogs(plan)) {
+      if (blocked.has(log.id)) continue;
+      const info = svc.ensureForm(formSpec(plan, log), svc.getProp(formProp(log.id)));
+      svc.setProp(formProp(log.id), info.id);
+      svc.setProp(verifiedProp(info.id), info.verifiedEmail ? "1" : "0");
+      forms.push({ log, url: info.url });
+      formIds.push(info.id);
+      if (info.addedItems.length) logActivity(svc, "info", `Added new questions to the form for "${log.name}": ${info.addedItems.join(", ")}.`);
+      if (info.updatedItems.length) logActivity(svc, "info", `Updated the choices or required setting of these questions in the form for "${log.name}": ${info.updatedItems.join(", ")}.`);
+      if (!info.verifiedEmail) {
+        logActivity(svc, "warning", `The form for "${log.name}" could not be set to verified email collection. Until it is, the engine treats every form email as unverified, so the owner is still alerted about each entry.`);
       }
     }
-  }
 
-  const activatedAt = svc.now().toISOString();
+    // Remove only this engine's own old triggers, then install the inventory.
+    const own = new Set<string>(TRIGGER_INVENTORY.map((t) => t.handler));
+    for (const t of svc.listTriggers()) if (own.has(t.handler)) svc.deleteTrigger(t.id);
+    for (const t of TRIGGER_INVENTORY) {
+      if (t.kind === "time") {
+        svc.createHourlyTrigger(t.handler);
+        installed++;
+      } else {
+        for (const id of formIds) {
+          svc.createFormSubmitTrigger(id, t.handler);
+          installed++;
+        }
+      }
+    }
+  });
+
   svc.setProp("activatedAt", activatedAt);
+  if (!svc.getProp(IMPORT_FROM_PROP)) svc.setProp(IMPORT_FROM_PROP, activatedAt);
+  const problems = plan.logs.filter((l) => blocked.has(l.id));
   const rows: string[][] = [
     ["Setting", "Value"],
     ["System", plan.system_name],
@@ -164,50 +295,86 @@ export function activate(svc: Services): ActivateResult {
     ["Triggers installed", `${installed} (hourly check, form submit)`],
     ["Daily email limit", String(dailyCapFor(plan.owner.email))],
     ...forms.map((f) => [`Form for "${f.log.name}"`, f.url]),
+    ...problems.map((l) => [`Problem with "${l.name}"`, "Different column headings. Rename the old tab and run Activate again. See Activity."]),
     ["Note", "Contributors use the form links above. They do not need to approve anything."],
   ];
   svc.replaceSetup(rows.map((r) => r.map((c) => sanitizeCellValue(c))));
-  logActivity(svc, "info", `Activated. ${installed} trigger(s) installed and ${forms.length} form(s) ready.`);
+  logActivity(svc, "info", `Activated. ${installed} trigger(s) installed and ${forms.length} form(s) ready.${problems.length ? ` ${problems.length} log(s) were skipped.` : ""}`);
+  if (problems.length) {
+    return { ok: true, message: `Activated, but ${problems.length} log(s) were skipped because their tab headings differ from the plan: ${problems.map((l) => `"${l.name}"`).join(", ")}. See the Activity tab for what to do.` };
+  }
   return { ok: true, message: `Activated. See the Setup tab for the form link${forms.length === 1 ? "" : "s"}.` };
 }
 
 // ---------- reading rows ----------
 
-const unescapeCell = (s: string): string => (/^'[=+\-@]/.test(s) ? s.slice(1) : s);
-
-function parseValue(f: PlanField, raw: string): EntryValue {
-  const s = unescapeCell(raw);
-  if (f.type === "multi_choice") return s.split(",").map((x) => x.trim()).filter(Boolean);
-  if (f.type === "number" && s !== "" && Number.isFinite(Number(s))) return Number(s);
-  return s;
+function parseValue(f: PlanField, raw: string, onBadDate?: (label: string) => void): EntryValue {
+  if (f.type === "multi_choice") return raw.split(",").map((x) => x.trim()).filter(Boolean);
+  if (f.type === "number" && raw !== "" && Number.isFinite(Number(raw))) return Number(raw);
+  if (f.type === "date") {
+    const r = normaliseValue({ ...f, required: false }, raw);
+    if (r.ok) return r.value;
+    onBadDate?.(f.label);
+    return "";
+  }
+  return raw;
 }
 
-export function rowToEntry(plan: Plan, logId: string, row: string[]): Entry {
+/** Row to Entry. `headers` are the tab's real headings, so columns are found by name and not by position. */
+export function rowToEntry(plan: Plan, logId: string, row: string[], headers?: string[], onBadDate?: (label: string) => void): Entry {
+  const expected = headersForLog(plan, logId);
+  const map = headers ? columnMap(headers, expected) : null;
+  const cell = (i: number): string => row[map ? map[i]! : i] ?? "";
   const values: Record<string, EntryValue> = {};
   logFields(plan, logId).forEach((f, i) => {
-    values[f.key] = parseValue(f, row[META_HEADERS.length + i] ?? "");
+    values[f.key] = parseValue(f, cell(META_HEADERS.length + i), onBadDate);
   });
-  const entry: Entry = { id: unescapeCell(row[0] ?? ""), enteredBy: unescapeCell(row[1] ?? ""), values };
-  const at = unescapeCell(row[2] ?? "");
+  const entry: Entry = { id: cell(0), enteredBy: cell(1), values };
+  const at = cell(2);
   if (at) entry.enteredAt = at;
   return entry;
 }
 
-function loadRows(svc: Services, plan: Plan): RowsByLog {
+type LogRows = { ok: true; headers: string[]; rows: string[][] } | { ok: false; message: string };
+
+function readLog(svc: Services, plan: Plan, log: PlanLog): LogRows {
+  const lay = layoutFor(svc, plan, log);
+  if (!lay.ok) return lay;
+  return { ok: true, headers: lay.headers, rows: svc.readRows(log.name) };
+}
+
+function loadRows(svc: Services, plan: Plan, date: string): RowsByLog {
   const out: Record<string, Entry[]> = {};
   for (const log of plan.logs) {
-    out[log.id] = svc.readRows(log.name).filter((r) => (r[0] ?? "") !== "").map((r) => rowToEntry(plan, log.id, r));
+    const r = readLog(svc, plan, log);
+    if (!r.ok) {
+      warnOnce(svc, `layout:${log.id}`, date, r.message);
+      out[log.id] = [];
+      continue;
+    }
+    let bad = 0;
+    out[log.id] = r.rows
+      .map((row) => rowToEntry(plan, log.id, row, r.headers, () => bad++))
+      .filter((e) => e.id !== "");
+    if (bad) {
+      warnOnce(svc, `date:${log.id}`, date, `${bad} date cell(s) in "${log.name}" could not be read as dates (use a form like 2026-03-01), so those dates are ignored until they are fixed.`);
+    }
   }
   return out;
 }
 
 function existingIds(svc: Services, plan: Plan): Record<string, Set<string>> {
   const out: Record<string, Set<string>> = {};
-  for (const log of plan.logs) out[log.id] = new Set(svc.readRows(log.name).map((r) => unescapeCell(r[0] ?? "")).filter(Boolean));
+  for (const log of plan.logs) {
+    const lay = layoutFor(svc, plan, log);
+    out[log.id] = new Set(lay.ok ? svc.readRows(log.name).map((r) => r[lay.map[0]!] ?? "").filter(Boolean) : []);
+  }
   return out;
 }
 
 // ---------- sending ----------
+
+export type SendKind = "reminder" | "alert";
 
 function readCount(svc: Services, date: string): number {
   try {
@@ -218,6 +385,17 @@ function readCount(svc: Services, date: string): number {
   }
 }
 
+function readKeyed(svc: Services, prop: string, key: string): number {
+  try {
+    const v = JSON.parse(svc.getProp(prop) ?? "null") as { key?: string; count?: number } | null;
+    return v && v.key === key && typeof v.count === "number" ? v.count : 0;
+  } catch {
+    return 0;
+  }
+}
+
+const writeKeyed = (svc: Services, prop: string, key: string, count: number) => svc.setProp(prop, JSON.stringify({ key, count: Math.max(0, count) }));
+
 function loadSentKeys(svc: Services, date: string): Set<string> {
   try {
     return new Set(JSON.parse(svc.getProp(SENT_PREFIX + date) ?? "[]") as string[]);
@@ -226,13 +404,25 @@ function loadSentKeys(svc: Services, date: string): Set<string> {
   }
 }
 
-function recordKeys(svc: Services, keys: string[]): void {
+function groupByDate(keys: string[]): Map<string, string[]> {
   const byDate = new Map<string, string[]>();
   for (const k of keys) {
     const d = k.split("|")[1] ?? "";
     byDate.set(d, [...(byDate.get(d) ?? []), k]);
   }
-  for (const [d, ks] of byDate) svc.setProp(SENT_PREFIX + d, JSON.stringify([...new Set([...loadSentKeys(svc, d), ...ks])]));
+  return byDate;
+}
+
+function recordKeys(svc: Services, keys: string[]): void {
+  for (const [d, ks] of groupByDate(keys)) svc.setProp(SENT_PREFIX + d, JSON.stringify([...new Set([...loadSentKeys(svc, d), ...ks])]));
+}
+
+function forgetKeys(svc: Services, keys: string[]): void {
+  for (const [d, ks] of groupByDate(keys)) {
+    const left = [...loadSentKeys(svc, d)].filter((k) => !ks.includes(k));
+    if (left.length) svc.setProp(SENT_PREFIX + d, JSON.stringify(left));
+    else svc.deleteProp(SENT_PREFIX + d);
+  }
 }
 
 function pruneSentKeys(svc: Services, today: string): void {
@@ -240,42 +430,106 @@ function pruneSentKeys(svc: Services, today: string): void {
   for (const k of svc.listPropKeys()) if (k.startsWith(SENT_PREFIX) && k.slice(SENT_PREFIX.length) < oldest) svc.deleteProp(k);
 }
 
-/** Send under the daily cap. Only emails that really went out count and record their keys. Returns how many were sent. */
-export function deliver(svc: Services, plan: Plan, items: Outgoing[]): number {
-  if (items.length === 0) return 0;
-  const today = zonedParts(svc.now(), plan.time_zone).date;
-  const cap = dailyCapFor(plan.owner.email);
-  const used = readCount(svc, today);
-  const sp = planSends(items.map((i) => i.to), used, cap);
-  const allowed = new Set(sp.allowed);
-  let sent = 0;
-  const keys: string[] = [];
-  for (const it of items) {
+interface Batch {
+  date: string;
+  hourKey: string;
+  kind: SendKind;
+  take: Outgoing[];
+}
+
+/**
+ * Decide what may go out and RESERVE it. The caller holds the script lock. The daily count and the sent keys are
+ * written before any mail is sent, so a second run that starts during the send sees them and cannot send the same
+ * thing or overspend the day's emails. dispatch() gives back whatever did not actually go out.
+ */
+function reserve(svc: Services, plan: Plan, items: Outgoing[], kind: SendKind): Batch {
+  const z = zonedParts(svc.now(), plan.time_zone);
+  const batch: Batch = { date: z.date, hourKey: `${z.date}T${z.hour}`, kind, take: [] };
+  if (items.length === 0) return batch;
+  const claimed = loadSentKeys(svc, z.date);
+  const fresh = items.filter((i) => i.keys.length === 0 || i.keys.some((k) => !claimed.has(k)));
+  const used = readCount(svc, z.date);
+  // MailApp's own remaining quota is the ceiling, whatever the account type says.
+  const cap = Math.max(0, Math.min(dailyCapFor(plan.owner.email), svc.remainingQuota() + used));
+  const sp = planSends(fresh.map((i) => i.to), used, cap);
+  let allowedList = sp.allowed;
+  if (kind === "alert") {
+    const dayRoom = Math.max(0, Math.floor(cap / 2) - readKeyed(svc, ALERT_DAY_PROP, z.date));
+    const hourRoom = Math.max(0, ALERTS_PER_HOUR - readKeyed(svc, ALERT_HOUR_PROP, batch.hourKey));
+    const room = Math.min(dayRoom, hourRoom);
+    if (allowedList.length > room) {
+      const dropped = allowedList.length - room;
+      allowedList = allowedList.slice(0, room);
+      if (svc.getProp(ALERT_NOTICE_PROP) !== z.date) {
+        svc.setProp(ALERT_NOTICE_PROP, z.date);
+        logActivity(svc, "warning", `${dropped} alert email(s) were not sent. Alerts are limited to ${ALERTS_PER_HOUR} per hour and half of the day's emails, so reminders and digests always have room. The entries themselves were saved.`);
+      }
+    }
+  }
+  const allowed = new Set(allowedList);
+  for (const it of fresh) {
     const to = it.to.trim().toLowerCase();
     if (!allowed.has(to)) continue;
     allowed.delete(to);
+    batch.take.push(it);
+  }
+  if (batch.take.length) {
+    svc.setProp(COUNT_PROP, JSON.stringify({ date: z.date, count: used + batch.take.length }));
+    recordKeys(svc, batch.take.flatMap((i) => i.keys));
+    if (kind === "alert") {
+      writeKeyed(svc, ALERT_DAY_PROP, z.date, readKeyed(svc, ALERT_DAY_PROP, z.date) + batch.take.length);
+      writeKeyed(svc, ALERT_HOUR_PROP, batch.hourKey, readKeyed(svc, ALERT_HOUR_PROP, batch.hourKey) + batch.take.length);
+    }
+  }
+  const msg = sp.deferred.length ? sp.message : planSends(allowedList, used, cap).message;
+  if (msg) {
+    const noticeKind = sp.deferred.length ? "limit" : "warn";
+    if (svc.getProp(NOTICE_PROP) !== `${z.date}|${noticeKind}`) {
+      svc.setProp(NOTICE_PROP, `${z.date}|${noticeKind}`);
+      logActivity(svc, "warning", msg);
+    }
+  }
+  return batch;
+}
+
+/** Send a reserved batch with NO lock held, then give back the reservation for anything that failed. Returns how many went out. */
+function dispatch(svc: Services, batch: Batch): number {
+  let sent = 0;
+  let failed = 0;
+  const failedKeys: string[] = [];
+  for (const it of batch.take) {
+    const to = it.to.trim().toLowerCase();
     try {
       svc.sendMail(to, it.subject, it.body);
       sent++;
-      keys.push(...it.keys);
     } catch (e) {
+      failed++;
+      failedKeys.push(...it.keys);
       logActivity(svc, "error", `An email to ${to} could not be sent: ${errText(e)}`);
     }
   }
-  if (keys.length) recordKeys(svc, keys);
-  if (sent) svc.setProp(COUNT_PROP, JSON.stringify({ date: today, count: used + sent }));
-  if (sp.message) {
-    const kind = sp.deferred.length ? "limit" : "warn";
-    if (svc.getProp(NOTICE_PROP) !== `${today}|${kind}`) {
-      svc.setProp(NOTICE_PROP, `${today}|${kind}`);
-      logActivity(svc, "warning", sp.message);
+  if (failed) {
+    try {
+      locked(svc, () => {
+        svc.setProp(COUNT_PROP, JSON.stringify({ date: batch.date, count: Math.max(0, readCount(svc, batch.date) - failed) }));
+        forgetKeys(svc, failedKeys);
+        if (batch.kind === "alert") {
+          writeKeyed(svc, ALERT_DAY_PROP, batch.date, readKeyed(svc, ALERT_DAY_PROP, batch.date) - failed);
+          writeKeyed(svc, ALERT_HOUR_PROP, batch.hourKey, readKeyed(svc, ALERT_HOUR_PROP, batch.hourKey) - failed);
+        }
+      });
+    } catch (e) {
+      // Safe direction: the count stays high and the keys stay recorded, so nothing is sent twice.
+      logActivity(svc, "warning", `The sheet was busy, so ${failed} failed email(s) were not given back to today's count: ${errText(e)}`);
     }
   }
   return sent;
 }
 
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+/** Send under the daily cap: reserve under the lock, send without it. Only emails that really went out stay counted. */
+export function deliver(svc: Services, plan: Plan, items: Outgoing[], kind: SendKind = "reminder"): number {
+  if (items.length === 0) return 0;
+  return dispatch(svc, locked(svc, () => reserve(svc, plan, items, kind)));
 }
 
 // ---------- adding entries ----------
@@ -283,8 +537,11 @@ function errText(e: unknown): string {
 export interface NewEntry {
   logId: string;
   raw: Record<string, unknown>;
+  /** Verified email (Google confirmed it), or "". Only this can identify the owner. */
   submitterEmail: string;
   submitterName: string;
+  /** An email the form reported but Google did not verify. Recorded, never trusted. */
+  unverifiedEmail?: string;
   /** Stable per submission (form response id) or random (sidebar). */
   seed: string;
   submittedAt: string;
@@ -298,48 +555,60 @@ export function addEntry(svc: Services, plan: Plan, ne: NewEntry): AddResult {
   const norm = normaliseEntry(plan, log.id, ne.raw);
   if (!norm.ok) return { ok: false, errors: norm.errors };
 
+  const enteredBy = ne.submitterEmail || (ne.unverifiedEmail ? `${ne.unverifiedEmail} (unverified)` : "") || ne.submitterName || "unknown";
   const entry: Entry = {
     id: makeEntryId({ seed: ne.seed, logId: log.id, submittedAt: ne.submittedAt }),
     values: norm.values,
-    enteredBy: ne.submitterEmail || ne.submitterName || "unknown",
+    enteredBy,
     enteredAt: ne.submittedAt,
   };
 
   let duplicate = false;
+  let refused = "";
   const routed: string[] = [];
-  svc.withLock(() => {
+  const skipped: string[] = [];
+  locked(svc, () => {
+    const lay = layoutFor(svc, plan, log);
+    if (!lay.ok) {
+      refused = lay.message;
+      return;
+    }
     const existing = existingIds(svc, plan);
     if (existing[log.id]?.has(entry.id)) {
       duplicate = true;
       return;
     }
-    svc.appendRows(log.name, [entryToCells(plan, log.id, entry)]);
+    svc.appendRows(log.name, [alignRow(entryToCells(plan, log.id, entry).map(unprefix), lay)]);
     const rp = planRouting(plan, log.id, entry, existing);
     for (const row of rp.rows) {
       const target = plan.logs.find((l) => l.id === row.logId);
       if (!target) continue;
-      svc.appendRows(target.name, [row.cells]);
+      const tl = layoutFor(svc, plan, target);
+      if (!tl.ok) {
+        skipped.push(tl.message);
+        continue;
+      }
+      svc.appendRows(target.name, [alignRow(row.cells.map(unprefix), tl)]);
       routed.push(target.name);
     }
   });
+  if (refused) {
+    logActivity(svc, "error", `An entry was not added. ${refused}`);
+    return { ok: false, errors: [refused] };
+  }
   if (duplicate) return { ok: true, duplicate: true, message: "That entry was already recorded." };
+  for (const m of skipped) logActivity(svc, "warning", `A copy was not written. ${m}`);
 
   const decision = alertsForSubmission(plan, ne.submitterEmail);
-  const who = decision.submitter.name ?? (ne.submitterEmail || ne.submitterName || "Someone");
+  const who = decision.submitter.name ?? enteredBy;
   logActivity(svc, "info", `New entry added to "${log.name}" by ${who}${routed.length ? `, copied to ${routed.join(", ")}` : ""}.`);
   if (decision.notify.length) {
-    deliver(svc, plan, decision.notify.map((to) => alertEmail(plan, to, log.id, log.name, entry, who)));
+    deliver(svc, plan, decision.notify.map((to) => alertEmail(plan, to, log.id, log.name, entry, who)), "alert");
   }
   return { ok: true, duplicate: false, message: `Saved to "${log.name}"${routed.length ? ` and copied to ${routed.join(", ")}` : ""}.` };
 }
 
-export function handleFormSubmission(svc: Services, sub: FormSubmission): AddResult {
-  const loaded = loadPlan(svc);
-  if (!loaded.ok) {
-    logActivity(svc, "error", `A form answer could not be added. ${loaded.message}`);
-    return { ok: false, errors: [loaded.message] };
-  }
-  const plan = loaded.plan;
+function importSubmission(svc: Services, plan: Plan, sub: FormSubmission, quiet = false): AddResult {
   const bases = baseLogs(plan);
   const log = bases.find((b) => svc.getProp(formProp(b.id)) === sub.formId) ?? (bases.length === 1 ? bases[0] : undefined);
   if (!log) {
@@ -349,19 +618,50 @@ export function handleFormSubmission(svc: Services, sub: FormSubmission): AddRes
   const byTitle = new Map(Object.entries(sub.answers).map(([k, v]) => [k.trim().toLowerCase(), v]));
   const raw: Record<string, unknown> = {};
   for (const f of logFields(plan, log.id)) raw[f.key] = byTitle.get(f.label.trim().toLowerCase());
-  const nameAnswer = byTitle.get(NAME_QUESTION.toLowerCase());
+  const nameAnswer = byTitle.get(nameQuestionTitle(plan, log.id).toLowerCase());
+  // Only an email Google verified may identify anyone (above all, the owner).
+  const verified = svc.getProp(verifiedProp(sub.formId)) === "1";
+  const email = cleanName(sub.email);
   const r = addEntry(svc, plan, {
     logId: log.id,
     raw,
-    submitterEmail: sub.email,
-    submitterName: typeof nameAnswer === "string" ? nameAnswer.trim() : "",
+    submitterEmail: verified ? sub.email : "",
+    unverifiedEmail: verified ? "" : email,
+    submitterName: cleanName(typeof nameAnswer === "string" ? nameAnswer : ""),
     seed: sub.responseId,
     submittedAt: sub.timestamp,
   });
-  if (!r.ok) {
+  if (!r.ok && !quiet) {
     logActivity(svc, "error", `A form answer was not added to "${log.name}" (it is still in the form's responses): ${r.errors.join("; ")}`);
   }
   return r;
+}
+
+export function handleFormSubmission(svc: Services, sub: FormSubmission): AddResult {
+  const loaded = loadPlan(svc);
+  if (!loaded.ok) {
+    logActivity(svc, "error", `A form answer could not be added. ${loaded.message}`);
+    return { ok: false, errors: [loaded.message] };
+  }
+  return importSubmission(svc, loaded.plan, sub);
+}
+
+/** Re-import form responses that never reached the log (for example the trigger timed out). Safe to repeat: ids are deterministic. */
+function catchUp(svc: Services, plan: Plan): void {
+  const from = svc.getProp(IMPORT_FROM_PROP);
+  if (!from) return;
+  const weekAgo = new Date(svc.now().getTime() - 7 * 24 * 3600_000).toISOString();
+  const since = from > weekAgo ? from : weekAgo;
+  for (const log of baseLogs(plan)) {
+    const formId = svc.getProp(formProp(log.id));
+    if (!formId) continue;
+    const known = existingIds(svc, plan)[log.id] ?? new Set<string>();
+    for (const sub of svc.listFormResponses(formId, since)) {
+      if (known.has(makeEntryId({ seed: sub.responseId, logId: log.id, submittedAt: sub.timestamp }))) continue;
+      const r = importSubmission(svc, plan, sub, true);
+      if (r.ok && !r.duplicate) logActivity(svc, "info", `Imported a form answer that the form trigger had missed, into "${log.name}".`);
+    }
+  }
 }
 
 export function submitEntryFromSidebar(svc: Services, payload: unknown): AddResult {
@@ -372,10 +672,11 @@ export function submitEntryFromSidebar(svc: Services, payload: unknown): AddResu
   const loaded = loadPlan(svc);
   if (!loaded.ok) return { ok: false, errors: [loaded.message] };
   const plan = loaded.plan;
+  // A blank email is recorded as unknown (never assumed to be the owner), so alerts still go out.
   return addEntry(svc, plan, {
     logId: p.logId,
     raw: p.values as Record<string, unknown>,
-    submitterEmail: svc.activeUserEmail() || plan.owner.email,
+    submitterEmail: svc.activeUserEmail(),
     submitterName: "",
     seed: svc.newId(),
     submittedAt: svc.now().toISOString(),
@@ -393,28 +694,41 @@ export function runRoutingNow(svc: Services): string {
   const plan = loaded.plan;
   let copied = 0;
   let skipped = 0;
-  svc.withLock(() => {
+  const problems: string[] = [];
+  locked(svc, () => {
     const existing = existingIds(svc, plan);
     for (const log of baseLogs(plan)) {
       if (!plan.routing_rules.some((r) => r.from === log.id)) continue;
-      for (const row of svc.readRows(log.name)) {
-        if (!unescapeCell(row[0] ?? "")) {
+      const src = readLog(svc, plan, log);
+      if (!src.ok) {
+        problems.push(src.message);
+        continue;
+      }
+      for (const row of src.rows) {
+        const entry = rowToEntry(plan, log.id, row, src.headers);
+        if (!entry.id) {
           skipped++;
           continue;
         }
-        const rp = planRouting(plan, log.id, rowToEntry(plan, log.id, row), existing);
+        const rp = planRouting(plan, log.id, entry, existing);
         for (const out of rp.rows) {
           const target = plan.logs.find((l) => l.id === out.logId);
           if (!target) continue;
-          svc.appendRows(target.name, [out.cells]);
+          const tl = layoutFor(svc, plan, target);
+          if (!tl.ok) {
+            if (!problems.includes(tl.message)) problems.push(tl.message);
+            continue;
+          }
+          svc.appendRows(target.name, [alignRow(out.cells.map(unprefix), tl)]);
           existing[out.logId]?.add(out.entryId);
           copied++;
         }
       }
     }
   });
-  const msg = `Routing finished. ${copied} row(s) copied.${skipped ? ` ${skipped} row(s) without an Entry ID were skipped.` : ""}`;
-  logActivity(svc, skipped ? "warning" : "info", msg);
+  for (const p of problems) logActivity(svc, "warning", p);
+  const msg = `Routing finished. ${copied} row(s) copied.${skipped ? ` ${skipped} row(s) without an Entry ID were skipped.` : ""}${problems.length ? ` ${problems.length} problem(s) with tab headings. See Activity.` : ""}`;
+  logActivity(svc, skipped || problems.length ? "warning" : "info", msg);
   return msg;
 }
 
@@ -425,16 +739,23 @@ export function hourlyTick(svc: Services): number {
     return 0;
   }
   const plan = loaded.plan;
-  return svc.withLock(() => {
+  try {
+    catchUp(svc, plan);
+  } catch (e) {
+    logActivity(svc, "warning", `Checking the form for missed answers did not finish: ${errText(e)}`);
+  }
+  // Work out what to send, and reserve it, under the lock. Then release the lock before any mail goes out.
+  const batch = locked(svc, () => {
     const now = svc.now();
     const date = zonedParts(now, plan.time_zone).date;
     pruneSentKeys(svc, date);
     const sentKeys = loadSentKeys(svc, date);
-    const rows = loadRows(svc, plan);
+    const rows = loadRows(svc, plan, date);
     const reminders = dueReminders(plan, rows, now, { sentKeys });
     const digests = digestsToSend(plan, rows, now, sentKeys);
-    return deliver(svc, plan, buildOutgoing(plan, reminders, digests, date));
+    return reserve(svc, plan, buildOutgoing(plan, reminders, digests, date), "reminder");
   });
+  return dispatch(svc, batch);
 }
 
 export function sendTestReminder(svc: Services): string {
@@ -446,7 +767,7 @@ export function sendTestReminder(svc: Services): string {
   const plan = loaded.plan;
   const now = svc.now();
   const date = zonedParts(now, plan.time_zone).date;
-  const rows = loadRows(svc, plan);
+  const rows = loadRows(svc, plan, date);
   const reminders = dueReminders(plan, rows, now, { ignoreSendHour: true });
   const sent = deliver(svc, plan, [testEmail(plan, plan.owner.email.toLowerCase(), reminders, buildDigest(plan, rows, now), date)]);
   const msg = sent ? `A test email was sent to ${plan.owner.email}.` : "The test email was not sent. See the Activity tab.";
@@ -490,8 +811,11 @@ export function guarded<T>(svc: Services, what: string, fn: () => T, ui = true):
   try {
     return fn();
   } catch (e) {
-    const busy = /lock/i.test(errText(e));
-    const msg = busy ? "The sheet is busy with another change. Please try again in a minute." : `${what} did not finish: ${errText(e)}`;
+    const msg = isBusy(e)
+      ? ui
+        ? "The sheet is busy with another change. Please try again in a minute."
+        : `${what} was skipped because the sheet was busy. ${what === "Form submit" ? "The answer is still in the form's responses and the next hourly check will add it." : "It will run again at the next hourly check."}`
+      : `${what} did not finish: ${errText(e)}`;
     logActivity(svc, "error", msg);
     if (ui) {
       try {

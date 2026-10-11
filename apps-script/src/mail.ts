@@ -65,8 +65,9 @@ export function alertEmail(plan: Plan, to: string, logId: string, logName: strin
   });
   return {
     to,
-    subject: `${plan.system_name}: new entry from ${who}`,
-    body: `${who} added a new entry to "${logName}".\n\n${lines.join("\n")}\n\nSent automatically by ${plan.system_name}.`,
+    // The name can be typed by a contributor, so it stays out of the subject and is quoted in the body.
+    subject: `${plan.system_name}: new entry in ${logName}`,
+    body: `A new entry was added to "${logName}". Entered by: "${who}".\n\n${lines.join("\n")}\n\nSent automatically by ${plan.system_name}.`,
     keys: [],
   };
 }

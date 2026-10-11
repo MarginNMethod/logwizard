@@ -152,10 +152,9 @@ describe("adding entries and routing", () => {
       submitterEmail: "owner@example.com", submitterName: "", seed: "s1", submittedAt: "2026-03-01T14:00:00.000Z",
     });
     expect(r.ok).toBe(true);
-    for (const w of svc.writes.filter((x) => x.tab !== "Activity")) {
-      for (const cell of w.rows.flat()) expect(/^[=+\-@]/.test(cell)).toBe(false);
-    }
-    expect(svc.readRows("All Employers")[0]![3]).toBe("'=HYPERLINK(\"http://x.example.com\",\"hi\")");
+    // Q2: log tabs are formatted as plain text ("@"), so the format alone keeps a formula inert and no apostrophe is added.
+    // (The old expectation of an apostrophe prefix in log tabs was the bug: it broke strictly validated list cells.)
+    expect(svc.readRows("All Employers")[0]![3]).toBe("=HYPERLINK(\"http://x.example.com\",\"hi\")");
     // a formula-like name in the Activity message is neutralised too
     expect(svc.activity().every((r) => !/^[=+\-@]/.test(r[2]!))).toBe(true);
   });
@@ -165,7 +164,7 @@ describe("adding entries and routing", () => {
     addEntry(svc, loadOk(svc), { logId: "main", raw: { ...raw, org_name: "=Acme" }, submitterEmail: "owner@example.com", submitterName: "", seed: "s2", submittedAt: "2026-03-01T14:00:00.000Z" });
     svc.tabs.set("Arts Log", [svc.tabs.get("Arts Log")![0]!]);
     runRoutingNow(svc);
-    expect(svc.readRows("Arts Log")[0]![3]).toBe("'=Acme");
+    expect(svc.readRows("Arts Log")[0]![3]).toBe("=Acme"); // Q2: stored raw in the plain-text cell
   });
 });
 
@@ -191,7 +190,12 @@ describe("sidebar", () => {
     const good = submitEntryFromSidebar(svc, { logId: "main", values: raw });
     expect(good.ok).toBe(true);
     expect(svc.readRows("All Employers")).toHaveLength(1);
-    expect(svc.mails).toHaveLength(0); // the sidebar user defaults to the owner
+    // A4: a blank sidebar user is recorded as unknown (not assumed to be the owner), so the alert still goes out.
+    expect(svc.mails).toHaveLength(1);
+    svc.mails.length = 0;
+    svc.user = "owner@example.com";
+    submitEntryFromSidebar(svc, { logId: "main", values: { ...raw, org_name: "Gamma" } });
+    expect(svc.mails).toHaveLength(0);
     svc.user = "rep@example.com";
     submitEntryFromSidebar(svc, { logId: "main", values: { ...raw, org_name: "Beta" } });
     expect(svc.mails).toHaveLength(1);
