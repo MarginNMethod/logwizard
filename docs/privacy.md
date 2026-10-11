@@ -10,8 +10,8 @@ LogWizard helps a small team set up an interaction log in their own Google accou
 
 - **We do not keep your plan, your answers, your emails, or your spreadsheet.** Your log lives in your own Google account.
 - **The only data kept on our server** is anonymous timing and count information, plus request counters for rate limiting.
-- **That data is deleted after 90 days.**
-- **An AI key you paste stays in your browser's memory.** It is never saved or logged.
+- **That data is meant to be deleted on a 90-day schedule.** The deletion job depends on a database feature that may not be available on a free project, so the project owner also clears old rows by hand if needed.
+- **An AI key you paste is kept only in your browser's memory.** It passes through our server once per request to reach the AI provider, and is never saved or logged.
 
 ---
 
@@ -21,12 +21,13 @@ LogWizard helps a small team set up an interaction log in their own Google accou
 |---|---|---|---|
 | Session ID | A random code made for one visit. It is not linked to your name or email. | To group the timing steps of one visit | 90 days |
 | Step name and duration | Which step of the setup you reached, and how many milliseconds it took | To measure how long setup takes | 90 days |
+| AI mode | Whether the visit used the demo (`replay`) or the visitor's own key (`byok`) | To compare how the planner does in each mode | 90 days |
 | Check result | Whether a plan passed validation (`pass`, `fail`, or `retry_pass`) and how many retries were needed | To measure how well the planner works | 90 days |
 | Timestamp | When the step happened | To group results by day | 90 days |
 | Visitor key (hashed) | A scrambled code for one visitor. It is used only to count requests in a time window. | To limit how many requests one visitor can send | 90 days |
 | Window start and request count | When a counting window began and how many requests were in it | To block abuse | 90 days |
 
-Hashed means the stored value is scrambled and cannot be read back. It is still an identifier for counting requests, so we treat it as personal data and delete it on the same schedule.
+Hashed means the stored value is scrambled and cannot practically be read back, as long as the secret salt stays secret. It is still an identifier for counting requests, so we treat it as personal data and delete it on the same schedule.
 
 ---
 
@@ -41,7 +42,7 @@ We never store any of the following on our server:
 - Links to your spreadsheet, your Google Form, or your Drive files
 - Google access tokens
 
-Interview answers stay in your browser for the length of the session. They are not saved after the session ends.
+Interview answers are sent to our server when you ask for a plan, so it can build the plan. They are not saved. In bring-your-own-key mode they are also sent to Anthropic under your key and Anthropic's terms. In demo mode they go nowhere else. Edited plans are sent to our server to be checked, and are also not saved.
 
 ---
 
@@ -98,3 +99,8 @@ Privacy questions: `contact@example.com` (placeholder, replace before publishing
 ## Changes
 
 We will update this page if the data we collect changes. The date at the top shows the latest draft.
+
+## Other things worth knowing
+
+- The Google script that runs in your spreadsheet sends its error messages to Google's own error log in your Google account. Those messages can include tab or log names. This is free and stays in your account.
+- Our hosts (Vercel for the website and Supabase for the database) keep their own request logs, which may include IP addresses. We do not control or read them.

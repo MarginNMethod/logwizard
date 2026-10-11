@@ -23,3 +23,10 @@ __pycache__/
 
 # Claude / OMC local state
 .omc/
+
+# Local tool state and credentials
+.clasp.json
+.clasprc.json
+.vercel/
+supabase/.temp/
+supabase/.branches/

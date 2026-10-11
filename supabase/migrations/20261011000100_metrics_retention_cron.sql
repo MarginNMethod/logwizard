@@ -1,4 +1,5 @@
--- Retention: delete metrics rows older than 90 days, daily at 03:17 UTC.
+-- Retention: delete funnel_events older than 90 days and rate_limits older than 1 day
+-- (windows last minutes), daily at 03:17 UTC.
 --
 -- APPLY ONLY IF pg_cron IS ENABLED ON THE FREE PLAN for this project
 -- (Dashboard > Database > Extensions). If it is not available, skip this file
@@ -24,7 +25,7 @@ begin
     '17 3 * * *',
     $job$
       delete from public.funnel_events where created_at   < now() - interval '90 days';
-      delete from public.rate_limits   where window_start < now() - interval '90 days';
+      delete from public.rate_limits   where window_start < now() - interval '1 day';
     $job$
   );
 end

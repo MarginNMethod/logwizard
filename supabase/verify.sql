@@ -46,3 +46,7 @@ where jobname = 'metrics_retention_90d';
 -- 9. Nothing older than 90 days remains (expect 0 and 0).
 select (select count(*) from public.funnel_events where created_at   < now() - interval '90 days') as old_events,
        (select count(*) from public.rate_limits   where window_start < now() - interval '90 days') as old_limits;
+
+-- 10. The rate-limit function cannot be executed by anon or authenticated (expect false and false).
+select has_function_privilege('anon', 'public.increment_rate_limit(text,timestamptz)', 'execute') as anon_can_execute,
+       has_function_privilege('authenticated', 'public.increment_rate_limit(text,timestamptz)', 'execute') as auth_can_execute;
