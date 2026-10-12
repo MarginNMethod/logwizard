@@ -166,3 +166,11 @@ Google's first-run screen for the bound script listed exactly five permissions:
 4. Allow this application to run when you are not present.
 5. Display and run third-party web content in prompts and sidebars inside Google applications.
 These match the five pinned scopes (`spreadsheets.currentonly`, `forms`, `send_mail`, `scriptapp`, `container.ui`). No Gmail-read, Drive-wide or contacts permission appeared. The "unverified app" wording was not captured.
+
+**Second H2 session: sidebar, follow-up reminder, weekly digest (2026-10-12)**
+- **Sidebar submit: passed, with one condition.** With two Google accounts signed in to the browser, `submitEntry` failed with `PERMISSION_DENIED` before any engine code ran (Executions page: Failed, 0 s). In an incognito window signed in to one account it saved to both tabs. The same limit applies to any Apps Script sidebar; the setup guide should say to use one Google account or a private window.
+- **Formula protection through the sidebar: passed.** `=SUM(A1)` in Organization stayed text.
+- **Gap found: owner entries are `unknown`.** `Entered by` was `unknown` for the owner's own sidebar entry, so the new-entry alert emailed the owner as if a contributor had written it. `Session.getActiveUser()` returned a blank address. Not yet fixed.
+- **Weekly digest: passed.** With send hours set to 0, one digest email arrived on the first `hourlyTick` ("2 new, 1 upcoming, 0 overdue"). A second run sent no second digest.
+- **Follow-up reminder: passed.** A row with follow-up date 2026-10-12 was correctly not sent on 2026-10-12 (due date is the follow-up date minus 1 day). After changing it to 2026-10-13, `hourlyTick` sent exactly one email; a second run sent none.
+- **Not covered:** the 80% and 100% daily send-limit paths, a Workspace account, a form-submit by a second Google account in this session.
