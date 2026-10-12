@@ -153,7 +153,7 @@ describe("reply envelope check", () => {
 describe("--version smoke test", () => {
   it("reports not recorded for every persona when a version has no recordings, without error", () => {
     const personasDir = join(import.meta.dirname, "..", "personas");
-    const rep = runEval({ personasDir, recordingsDir: join(import.meta.dirname, "..", "recordings"), version: "v2" });
+    const rep = runEval({ personasDir, recordingsDir: join(import.meta.dirname, "..", "recordings"), version: "v99" });
     expect(rep.total_personas).toBe(12);
     expect(rep.results.filter((r) => r.status === "not_recorded")).toHaveLength(12);
     expect(rep.recorded).toBe(0);

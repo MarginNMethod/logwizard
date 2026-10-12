@@ -58,6 +58,8 @@ Source: `evals/results.md`, read 2026-10-11 at 16:33. Prompt version v1.
 | Clean on the diff and on the reply-length check | 10 of 12 |
 | Invented features | 0 |
 
+**Second run, prompt v2 (`evals/results.v2.md`).** Twelve fresh subagents, one per persona, each given only the v2 prompt text and that persona's answers (the limit was by instruction, not enforced by the tools). Result: 12 of 12 valid on the first try, 12 of 12 match the answer key, 12 of 12 pass the reply-length check, 0 invented, 0 missing, no retries. **This is in-sample.** The v2 prompt was written after seeing the v1 results on these same 12 personas, and two of its changes target the two v1 problems directly. It shows those problems are fixed. It does not show that the planner generalises. A fair test needs new personas written after v2 was frozen, by someone other than the prompt author.
+
 Caveats that go with every quote of these numbers:
 
 - **Not an API measurement.** The recordings were made by Claude Code subagents on Aaron's existing Claude Code plan. No paid Anthropic API was called (ADR 0005).

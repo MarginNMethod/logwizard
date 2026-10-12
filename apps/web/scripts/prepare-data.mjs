@@ -18,7 +18,15 @@ for (const f of readdirSync(recDir)) if (f.endsWith(".json")) rmSync(path.join(r
 
 // 1. Recordings (planner outputs). Copied unmodified.
 const srcRec = path.join(repo, "evals", "recordings");
-const recFiles = readdirSync(srcRec).filter((f) => /\.v\d+\.json$/.test(f)).sort();
+// Keep only the newest prompt version of each persona's recording.
+const newest = new Map();
+for (const f of readdirSync(srcRec)) {
+  const m = /^(.+)\.v(\d+)\.json$/.exec(f);
+  if (!m) continue;
+  const cur = newest.get(m[1]);
+  if (!cur || Number(m[2]) > cur.v) newest.set(m[1], { v: Number(m[2]), f });
+}
+const recFiles = [...newest.values()].map((x) => x.f).sort();
 if (recFiles.length === 0) throw new Error("No recordings found in evals/recordings");
 for (const f of recFiles) writeFileSync(path.join(recDir, f), readFileSync(path.join(srcRec, f)));
 const imports = recFiles.map((f, i) => `import r${i} from "./${f}";`).join("\n");
@@ -39,10 +47,14 @@ const personas = readdirSync(srcPersonas)
 writeFileSync(path.join(data, "personas.json"), JSON.stringify(personas, null, 2) + "\n");
 
 // 3. Planner prompt: everything below the first "---" line.
-const promptSrc = readFileSync(path.join(repo, "evals", "planner-prompt.md"), "utf8");
+// Use the newest planner prompt file (planner-prompt.md is v1; planner-prompt.vN.md are later versions).
+const promptFiles = readdirSync(path.join(repo, "evals")).filter((f) => /^planner-prompt(\.v\d+)?\.md$/.test(f));
+const promptVersionOf = (f) => Number(/\.v(\d+)\.md$/.exec(f)?.[1] ?? 1);
+promptFiles.sort((a, b) => promptVersionOf(b) - promptVersionOf(a));
+const promptSrc = readFileSync(path.join(repo, "evals", promptFiles[0]), "utf8");
 const version = /planner_prompt_version:\s*(\S+)/.exec(promptSrc)?.[1] ?? "unknown";
 const marker = promptSrc.indexOf("\n---\n");
-if (marker < 0) throw new Error("planner-prompt.md has no --- separator");
+if (marker < 0) throw new Error("planner prompt has no --- separator");
 const promptText = promptSrc.slice(marker + 5).trim();
 writeFileSync(
   path.join(data, "planner-prompt.ts"),

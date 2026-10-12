@@ -1,0 +1,182 @@
+{
+  "persona_id": "church-volunteers",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-11",
+  "planner_prompt_version": "v2",
+  "isolation": "fresh-subagent",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Volunteer Check-ins",
+      "time_zone": "America/Denver",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Ruth Alvarez",
+          "email": "ruth.alvarez@example.com",
+          "role": "contributor"
+        },
+        {
+          "name": "Tom Becker",
+          "email": "tom.becker@example.com",
+          "role": "contributor"
+        },
+        {
+          "name": "Grace Okafor",
+          "email": "grace.okafor@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Volunteer Check-ins",
+          "fields": [
+            {
+              "key": "volunteer_name",
+              "label": "Volunteer name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "phone",
+              "label": "Phone",
+              "type": "phone",
+              "required": false
+            },
+            {
+              "key": "email",
+              "label": "Email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "ministry",
+              "label": "Ministry",
+              "type": "multi_choice",
+              "required": false,
+              "options": [
+                "Children's Ministry",
+                "Hospitality",
+                "Music",
+                "Outreach"
+              ]
+            },
+            {
+              "key": "date_contacted",
+              "label": "Date contacted",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "how_contacted",
+              "label": "How contacted",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Call",
+                "Email"
+              ]
+            },
+            {
+              "key": "availability",
+              "label": "Availability",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        },
+        {
+          "id": "childrens_ministry",
+          "name": "Children's Ministry Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "hospitality",
+          "name": "Hospitality Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "music",
+          "name": "Music Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "outreach",
+          "name": "Outreach Log",
+          "copy_fields_from": "main"
+        }
+      ],
+      "routing_rules": [
+        {
+          "from": "main",
+          "when": {
+            "field": "ministry",
+            "includes": "Children's Ministry"
+          },
+          "copy_to": "childrens_ministry"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "ministry",
+            "includes": "Hospitality"
+          },
+          "copy_to": "hospitality"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "ministry",
+            "includes": "Music"
+          },
+          "copy_to": "music"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "ministry",
+            "includes": "Outreach"
+          },
+          "copy_to": "outreach"
+        }
+      ],
+      "reminders": [
+        {
+          "type": "weekly_digest",
+          "day": "SUN",
+          "send_hour": 19,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ]
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Fresh general-purpose subagent, one persona each, model not reported. Its instructions and input were a single scratch file holding the text below the --- line of planner-prompt.v2.md plus the answers JSON; the subagent was told to read only that file. That limit was by instruction, not enforced by the tooling. The reply was saved unmodified and validated with the real validator (VALID on the first try); no plan was edited."
+}

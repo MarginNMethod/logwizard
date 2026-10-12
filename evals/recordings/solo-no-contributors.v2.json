@@ -1,0 +1,82 @@
+{
+  "persona_id": "solo-no-contributors",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-11",
+  "planner_prompt_version": "v2",
+  "isolation": "fresh-subagent",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Freelance Client Log",
+      "time_zone": "America/Los_Angeles",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Freelance Client Log",
+          "fields": [
+            {
+              "key": "client_name",
+              "label": "Client name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "email",
+              "label": "Email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "project",
+              "label": "Project",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "outcome",
+              "label": "Outcome",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "next_step",
+              "label": "Next step",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [],
+      "alerts": []
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": [
+      "Alert for entries by others was not added because there are no contributors; it needs at least one."
+    ]
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Fresh general-purpose subagent, one persona each, model not reported. Its instructions and input were a single scratch file holding the text below the --- line of planner-prompt.v2.md plus the answers JSON; the subagent was told to read only that file. That limit was by instruction, not enforced by the tooling. The reply was saved unmodified and validated with the real validator (VALID on the first try); no plan was edited."
+}
