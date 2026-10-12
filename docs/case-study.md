@@ -140,10 +140,8 @@ I built the system by hand five times (`PLAN.md` section 1) but did not record t
 
 ## What I would do differently
 
-*Draft from the project record. Rewrite this section in your own words before publishing.*
-
-1. **Test the real Google earlier.** The formula bug, the missing email scope and the two-account failure all surfaced only in the real-Google run. Offline tests could not have found them, and I ran that check late.
-2. **Freeze the eval answer key before the first run.** The v1 key changed after a run showed a difference. A key fixed in advance is stronger evidence.
-3. **Write the held-out personas first.** The v2 results are in-sample because I could not test on people the prompt had never seen. New personas written before the prompt would have given a fair test.
-4. **Time the hand-built systems when I made them.** The before-time is the number a reader most wants, and it is the one I cannot supply honestly.
-5. **Make the fake match the real thing as I learn it.** Each real-Google surprise should immediately update the fake and add a test, as I did for formulas, so the lesson stays in the suite.
+1. **Run the real Google test earlier.** The formula bug, the missing email scope and the two-account failure surfaced only in the real run. Offline tests could not have caught them.
+2. **Freeze the answer key before the first eval run.** I loosened one v1 label after seeing a result. A key fixed in advance is stronger evidence.
+3. **Write held-out test cases first.** v2 was tuned and graded on the same 12 personas. New personas written before the prompt would give a fair test.
+4. **Time the hand-built systems when I made them.** The before-time is the number a reader most wants, and I cannot supply it honestly.
+5. **Update the fake with every real-Google surprise.** I did this for formulas, so each lesson stays in the suite.

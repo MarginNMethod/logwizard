@@ -1,6 +1,6 @@
 # LogWizard privacy notice
 
-Status: draft, 2026-10-11. Replace the contact placeholder before this page is used on the Google OAuth consent screen.
+Status: 2026-10-12.
 
 LogWizard helps a small team set up an interaction log in their own Google account. This page says what the app stores, what it never stores, and how it handles the optional AI key.
 
@@ -92,7 +92,7 @@ The project's tests check that the key is never stored or logged: an automated t
 
 ## Contact
 
-Privacy questions: `contact@example.com` (placeholder, replace before publishing).
+Privacy questions: marginnmethod@gmail.com.
 
 ---
 
