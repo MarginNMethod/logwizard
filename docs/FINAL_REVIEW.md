@@ -47,11 +47,11 @@ Ready to show, with two honest caveats that the documents now state up front:
 ## Risks a hiring manager could still find
 
 1. **The missing connecting step.** This is the biggest. It is stated plainly, but a skeptical reader may still ask why it is not built. The honest answer is scope: the project proves the safe-planning idea and the engine, and Phase 4 is the next piece.
-2. **The eval is in-sample.** The v2 prompt was tuned on the same 12 personas it was graded on. Stated in the case study. A held-out persona set would remove the objection.
+2. **The eval is small and not independent.** Five held-out personas (written and committed before the run) passed 5 of 5, which answers the in-sample objection for those cases. The author of the personas, keys and prompt is the same, and each persona ran once. Stated in the case study.
 3. **No video walkthrough or sample sheet.** The demo script exists, the recording does not. A short screen recording of the live demo and one real Google sheet would make the evidence easier to scan.
 4. **"What I would do differently" is a draft.** It is written from the project record. It should be rewritten in the author's own words before the page is published.
-5. **`docs/privacy.md` still has a placeholder contact address.** It must be replaced before the page is used anywhere official, such as an OAuth consent screen.
-6. **Private repository.** The GitHub repo is private. A reader without access sees only the live site. Making it public, or sharing a read-only link, is a decision for the owner.
+5. **Privacy contact.** Set to marginnmethod@gmail.com on 2026-10-12. This is a personal address, now public.
+6. **Public repository.** Made public on 2026-10-12 after scanning the full history for keys, tokens and personal emails. The only real address in history is marginnmethod@gmail.com, which is now the public privacy contact.
 
 ## What I did not review
 
@@ -61,8 +61,8 @@ Ready to show, with two honest caveats that the documents now state up front:
 
 ## Recommended before publishing
 
-1. Rewrite "What I would do differently" in the author's voice.
-2. Replace the placeholder privacy contact.
-3. Decide whether to make the repository public.
-4. Record the 3-minute demo and add the link.
-5. If possible, write 3 to 5 new personas, freeze the prompt, and re-run the eval to remove the in-sample caveat.
+1. Done: "What I would do differently" rewritten concisely.
+2. Done: privacy contact set.
+3. Done: repository public.
+4. Record the 3-minute demo and add the link (a screen recording needs a person at the screen).
+5. Done on 2026-10-12: five held-out personas, prompt frozen, 5 of 5 passed. For stronger evidence, have someone else write personas and keys.

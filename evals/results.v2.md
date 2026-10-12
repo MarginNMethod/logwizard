@@ -6,14 +6,14 @@ Planner prompt version: v2
 
 ## Summary
 
-- Personas: 12. Recorded: 12. Not recorded yet: 0.
-- Valid on first try: 12 of 12 recorded.
-- Valid after one retry (includes first-try passes): 12 of 12 recorded.
-- Matches expected with no diff issues: 12 of 12 recorded.
-- Reply envelope (notes within the 200 character cap, at most 2 follow-up questions, no extra keys): 12 of 12 recorded pass. 0 fail. This is checked separately from plan validity, so a recording can be valid and still fail here.
-- Clean on both the diff and the envelope: 12 of 12 recorded.
+- Personas: 17. Recorded: 17. Not recorded yet: 0.
+- Valid on first try: 17 of 17 recorded.
+- Valid after one retry (includes first-try passes): 17 of 17 recorded.
+- Matches expected with no diff issues: 17 of 17 recorded.
+- Reply envelope (notes within the 200 character cap, at most 2 follow-up questions, no extra keys): 17 of 17 recorded pass. 0 fail. This is checked separately from plan validity, so a recording can be valid and still fail here.
+- Clean on both the diff and the envelope: 17 of 17 recorded.
 - Invented features: 0. Missing features: 0.
-- The denominator is recorded personas only (12), not all 12. Target (PLAN.md): all personas valid after one retry and zero invented features, which can be claimed only once every persona has a recording.
+- The denominator is recorded personas only (17), not all 17. Target (PLAN.md): all personas valid after one retry and zero invented features, which can be claimed only once every persona has a recording.
 
 ## Per persona
 
@@ -23,6 +23,11 @@ Planner prompt version: v2
 | church-volunteers | pass | first try | ok | - | - | - |
 | eight-areas | pass | first try | ok | - | - | - |
 | forty-fields | pass | first try | ok | - | - | - |
+| ho-berlin-library | pass | first try | ok | - | - | - |
+| ho-clinic-referrals | pass | first try | ok | - | - | - |
+| ho-coach-recruiting | pass | first try | ok | - | - | - |
+| ho-slack-dashboard | pass | first try | ok | - | - | - |
+| ho-team-no-emails | pass | first try | ok | - | - | - |
 | nonprofit-donors | pass | first try | ok | - | - | - |
 | odd-time-zone | pass | first try | ok | - | - | - |
 | prompt-injection | pass | first try | ok | - | - | - |
@@ -34,7 +39,7 @@ Planner prompt version: v2
 
 ## Notes and limits
 
-- Recording dates: 2026-10-11 to 2026-10-11.
+- Recording dates: 2026-10-11 to 2026-10-12.
 - The diff is mechanical (evals/README.md, Diff rules). It checks features, counts, days, time zone, required field labels, refusals, limits, forbidden strings, and formula or code artefacts. It cannot judge whether extra fields are sensible, so fields beyond the required labels are not counted as invented.
 - The runner recomputes validation with the real validator and flags any recording whose recorded validation block disagrees.
 - Each persona has one recording, so these results show what one run produced, not how often the prompt succeeds.

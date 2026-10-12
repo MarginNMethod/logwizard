@@ -1,0 +1,145 @@
+{
+  "persona_id": "ho-berlin-library",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-12",
+  "planner_prompt_version": "v2",
+  "isolation": "fresh-subagent",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "School Outreach",
+      "time_zone": "Europe/Berlin",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Jonas Keller",
+          "email": "jonas.keller@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "School Outreach",
+          "fields": [
+            {
+              "key": "school_name",
+              "label": "School name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "teacher",
+              "label": "Teacher",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "date",
+              "label": "Date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "contact_method",
+              "label": "Contact method",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Email",
+                "Phone",
+                "In person",
+                "Letter"
+              ]
+            },
+            {
+              "key": "grade_level",
+              "label": "Grade level",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Primary",
+                "Secondary"
+              ]
+            },
+            {
+              "key": "outcome",
+              "label": "Outcome",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Booked visit",
+                "No reply",
+                "Declined"
+              ]
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        },
+        {
+          "id": "primary",
+          "name": "Primary Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "secondary",
+          "name": "Secondary Log",
+          "copy_fields_from": "main"
+        }
+      ],
+      "routing_rules": [
+        {
+          "from": "main",
+          "when": {
+            "field": "grade_level",
+            "includes": "Primary"
+          },
+          "copy_to": "primary"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "grade_level",
+            "includes": "Secondary"
+          },
+          "copy_to": "secondary"
+        }
+      ],
+      "reminders": [
+        {
+          "type": "weekly_digest",
+          "day": "WED",
+          "send_hour": 17,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ]
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Held-out persona, written and committed with its answer key (commit 18834ab) before this run. Fresh general-purpose subagent, one persona, model not reported. Its only input was a single scratch file holding the text below the --- line of planner-prompt.v2.md (sha256 280df20e...) plus the answers JSON; it was told to read only that file. That limit was by instruction, not enforced by the tooling. The reply was saved unmodified and validated with the real validator (VALID on the first try); no plan was edited."
+}

@@ -95,7 +95,7 @@ The two recordings that are not clean:
 
 - **The answer key changed after the first run.** The first run marked `career-center` as "differs from expected" because the key required the label "Organization" and the plan used "Organization name", which is the persona's own wording. The key now accepts either label (`field_label_alternatives`). The planner prompt was not changed. This moved the diff-clean count from 10 to 11. Any report must say so.
 - **An earlier read of `results.md` showed 10 of 12 diff-clean.** That number is from before the key change. The file as read on 2026-10-11 at 16:33 says 11 of 12 diff-clean and 10 of 12 clean on both checks. This document uses that version. The eval files are still being edited, so re-read `results.md` before quoting numbers.
-- **v2 prompt has no recordings yet.** `evals/planner-prompt.v2.md` tightens both gaps above. It is not graded. `results.md` reports 12 of 12 as not recorded for v2.
+- **v2 prompt has recordings.** `evals/planner-prompt.v2.md` tightens both gaps above. It scored 12 of 12 on the original personas (in-sample) and 5 of 5 on five held-out personas written and committed before the run, so 17 of 17 overall (`evals/results.v2.md`, `evals/results-notes.v2.md`). `results.md` stays the v1 report.
 
 ### 4.4 Limits (say these every time the numbers are quoted)
 
@@ -104,7 +104,7 @@ The two recordings that are not clean:
 3. **Same author.** The personas and the prompt were written by the same author. The answer key was also changed once after a run (4.3).
 4. **Not an API measurement.** No paid Anthropic API was called (ADR 0005). The numbers describe the planner prompt and schema, not a model served through the API.
 5. **Mechanical diff.** The diff cannot judge whether an extra field is sensible.
-6. **Small set.** 12 personas. The target in PLAN.md section 5 (10 of 10 valid after one retry, zero invented features) applies to a larger set and needs every persona recorded.
+6. **Small set.** 17 personas (12 original, 5 held-out), one run each. The target in PLAN.md section 5 (10 of 10 valid after one retry, zero invented features) applies to a larger set and needs every persona recorded.
 
 ---
 
@@ -221,5 +221,5 @@ The team lead records each tester's pass or fail and their sentence in the next 
 | WCAG 2.1 AA (requirement N-5) | Not audited. The UAT in section 5 uses keyboard-only for T3 only. | Required by the requirements |
 | Live planner calls | Not run. No key, no paid call (ADR 0005). | Recordings were made by subagents, not the API |
 | Supabase metrics writes | Tested with stubs, and checked once against the live project on 2026-10-12 (one test event stored, then deleted). | Optional; the app must work without it |
-| Eval numbers beyond 12 personas and one run | Not measured | See 4.4 |
+| Eval numbers beyond 17 personas and one run | Not measured | See 4.4 |
 | The end-to-end time target (under 20 minutes) | Not measured. Planned for H3. | Case study placeholder |

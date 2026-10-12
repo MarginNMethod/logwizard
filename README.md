@@ -2,7 +2,8 @@
 
 **Working name.** The final name is not decided (`docs/OPEN_ITEMS.md`).
 
-**Live demo (no sign-in, no key): https://logwizard.vercel.app**
+**Live demo (no sign-in, no key): https://logwizard.vercel.app**  
+Source: https://github.com/MarginNMethod/logwizard
 
 LogWizard is a web app that sets up an interaction-logging system in a person's own Google account. An interaction log is a spreadsheet where each row records one contact, such as an email with an employer. The system adds an entry form, copies entries between related logs, sends follow-up reminders and a weekly digest, and alerts the owner when someone else adds an entry.
 
@@ -30,7 +31,7 @@ Read this section before quoting any claim from this repository. Dates are 2026-
 - Routing, reminder, digest, send-cap and alert logic as pure functions (`packages/engine-logic`, 85 tests).
 - Apps Script engine, bundled into one 228.7 KB file with 6 OAuth scopes (`apps-script`, 67 tests).
 - Web app: interview, plan preview with editing, plan download, Demo mode (`apps/web`, 66 tests).
-- Eval set: 12 synthetic personas, recorded plans, a grading runner (`evals`, 37 tests).
+- Eval set: 17 synthetic personas (5 held out), recorded plans, a grading runner (`evals`, 37 tests).
 - **456 tests in total** (`CI=1 pnpm -r test`). They use fake Google services and recorded plans. They do not call Google or an AI.
 
 **Proven by hand in a real Google account (personal Gmail, 2026-10-12)**
@@ -51,7 +52,7 @@ Read this section before quoting any claim from this repository. Dates are 2026-
 - **The step that connects the web app to Google is not built.** There is no Google sign-in in the web app, and it does not copy the template or install the engine for a visitor. Today the engine is installed by hand with `clasp` and tested directly. This is the main gap between the demo and the full product (`PLAN.md`, Phase 4).
 - A Google Workspace account, a second Google account using the sidebar, and the daily send-limit warning paths have not been tested in real Google.
 - The planner has only run on plans recorded by Claude Code subagents. No live model call was made, by design.
-- Eval numbers are in-sample (same author for the prompt and the personas). See `evals/results.v2.md`.
+- The eval is small and not independent: 17 personas, one run each. 12 were used to tune the prompt, and 5 held-out personas were written and committed before the final run. All were written by the same author as the prompt (`evals/results-notes.v2.md`).
 - Accessibility (WCAG 2.1 AA) has not been audited.
 - The recorded video walkthrough and the sample sheet link do not exist yet (`docs/demo-script.md`).
 - Microsoft: design only (`docs/MICROSOFT_ADAPTER.md`).

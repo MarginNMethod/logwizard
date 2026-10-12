@@ -1,0 +1,114 @@
+{
+  "persona_id": "ho-coach-recruiting",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-12",
+  "planner_prompt_version": "v2",
+  "isolation": "fresh-subagent",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Recruiting Contacts",
+      "time_zone": "America/Los_Angeles",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Kim Nakamura",
+          "email": "kim.nakamura@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Recruiting Contacts",
+          "fields": [
+            {
+              "key": "coach_name",
+              "label": "Coach name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "school",
+              "label": "School",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "division",
+              "label": "Division",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "D1",
+                "D2",
+                "D3",
+                "NAIA"
+              ]
+            },
+            {
+              "key": "email",
+              "label": "Email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "date_of_contact",
+              "label": "Date of contact",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "status",
+              "label": "Status",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Interested",
+                "Waiting",
+                "Not interested"
+              ]
+            },
+            {
+              "key": "follow_up_date",
+              "label": "Follow-up date",
+              "type": "date",
+              "required": false
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "routing_rules": [],
+      "reminders": [
+        {
+          "type": "follow_up_due",
+          "log": "main",
+          "date_field": "follow_up_date",
+          "days_before": 7,
+          "notify": [
+            "owner"
+          ],
+          "send_hour": 8
+        }
+      ],
+      "alerts": []
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Held-out persona, written and committed with its answer key (commit 18834ab) before this run. Fresh general-purpose subagent, one persona, model not reported. Its only input was a single scratch file holding the text below the --- line of planner-prompt.v2.md (sha256 280df20e...) plus the answers JSON; it was told to read only that file. That limit was by instruction, not enforced by the tooling. The reply was saved unmodified and validated with the real validator (VALID on the first try); no plan was edited."
+}

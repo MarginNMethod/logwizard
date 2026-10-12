@@ -1,5 +1,5 @@
 // Uses TEST FIXTURES under test/fixtures (hand-written fake personas and recordings, not real ones).
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -154,8 +154,9 @@ describe("--version smoke test", () => {
   it("reports not recorded for every persona when a version has no recordings, without error", () => {
     const personasDir = join(import.meta.dirname, "..", "personas");
     const rep = runEval({ personasDir, recordingsDir: join(import.meta.dirname, "..", "recordings"), version: "v99" });
-    expect(rep.total_personas).toBe(12);
-    expect(rep.results.filter((r) => r.status === "not_recorded")).toHaveLength(12);
+    const personaCount = readdirSync(personasDir).filter((f) => f.endsWith(".json")).length;
+    expect(rep.total_personas).toBe(personaCount);
+    expect(rep.results.filter((r) => r.status === "not_recorded")).toHaveLength(personaCount);
     expect(rep.recorded).toBe(0);
     expect(renderResults(rep)).not.toMatch(/of 0 recorded/);
   });

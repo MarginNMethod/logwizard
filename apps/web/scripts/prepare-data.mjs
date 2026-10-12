@@ -22,7 +22,7 @@ const srcRec = path.join(repo, "evals", "recordings");
 const newest = new Map();
 for (const f of readdirSync(srcRec)) {
   const m = /^(.+)\.v(\d+)\.json$/.exec(f);
-  if (!m) continue;
+  if (!m || m[1].startsWith("ho-")) continue; // held-out eval personas are not demo samples
   const cur = newest.get(m[1]);
   if (!cur || Number(m[2]) > cur.v) newest.set(m[1], { v: Number(m[2]), f });
 }
@@ -38,7 +38,7 @@ writeFileSync(
 // 2. Personas: id, title, answers. The "expected" block is never copied.
 const srcPersonas = path.join(repo, "evals", "personas");
 const personas = readdirSync(srcPersonas)
-  .filter((f) => f.endsWith(".json"))
+  .filter((f) => f.endsWith(".json") && !f.startsWith("ho-"))
   .sort()
   .map((f) => {
     const p = JSON.parse(readFileSync(path.join(srcPersonas, f), "utf8"));

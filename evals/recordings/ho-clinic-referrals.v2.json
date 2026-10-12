@@ -1,0 +1,160 @@
+{
+  "persona_id": "ho-clinic-referrals",
+  "produced_by": "Claude Code subagent run of evals/planner-prompt.md (no paid API call)",
+  "date": "2026-10-12",
+  "planner_prompt_version": "v2",
+  "isolation": "fresh-subagent",
+  "raw_plan": {
+    "plan": {
+      "schema_version": 1,
+      "system_name": "Referral Tracker",
+      "time_zone": "America/Denver",
+      "owner": {
+        "name": "Sample Owner",
+        "email": "owner@example.com"
+      },
+      "contributors": [
+        {
+          "name": "Dana Whitfield",
+          "email": "dana.whitfield@example.com",
+          "role": "contributor"
+        },
+        {
+          "name": "Luis Ortega",
+          "email": "luis.ortega@example.com",
+          "role": "contributor"
+        }
+      ],
+      "logs": [
+        {
+          "id": "main",
+          "name": "Referral Tracker",
+          "fields": [
+            {
+              "key": "practice_name",
+              "label": "Practice name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "key": "doctor_name",
+              "label": "Doctor name",
+              "type": "text",
+              "required": false
+            },
+            {
+              "key": "contact_email",
+              "label": "Contact email",
+              "type": "email",
+              "required": false
+            },
+            {
+              "key": "referral_date",
+              "label": "Referral date",
+              "type": "date",
+              "required": true
+            },
+            {
+              "key": "referral_type",
+              "label": "Referral type",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "New patient",
+                "Follow-up",
+                "Discharge"
+              ]
+            },
+            {
+              "key": "specialty",
+              "label": "Specialty",
+              "type": "choice",
+              "required": false,
+              "options": [
+                "Orthopedics",
+                "Neurology"
+              ]
+            },
+            {
+              "key": "next_check_in_date",
+              "label": "Next check-in date",
+              "type": "date",
+              "required": false
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "type": "long_text",
+              "required": false
+            }
+          ]
+        },
+        {
+          "id": "orthopedics",
+          "name": "Orthopedics Log",
+          "copy_fields_from": "main"
+        },
+        {
+          "id": "neurology",
+          "name": "Neurology Log",
+          "copy_fields_from": "main"
+        }
+      ],
+      "routing_rules": [
+        {
+          "from": "main",
+          "when": {
+            "field": "specialty",
+            "includes": "Orthopedics"
+          },
+          "copy_to": "orthopedics"
+        },
+        {
+          "from": "main",
+          "when": {
+            "field": "specialty",
+            "includes": "Neurology"
+          },
+          "copy_to": "neurology"
+        }
+      ],
+      "reminders": [
+        {
+          "type": "follow_up_due",
+          "log": "main",
+          "date_field": "next_check_in_date",
+          "days_before": 3,
+          "notify": [
+            "owner"
+          ],
+          "send_hour": 8
+        },
+        {
+          "type": "weekly_digest",
+          "day": "FRI",
+          "send_hour": 9,
+          "notify": [
+            "owner"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "on": "new_entry",
+          "when_entered_by": "contributor",
+          "notify": [
+            "owner"
+          ]
+        }
+      ]
+    },
+    "follow_up_questions": [],
+    "unsupported_requests": []
+  },
+  "validation": {
+    "first_try_pass": true,
+    "retried": false,
+    "retry_pass": null
+  },
+  "notes": "Held-out persona, written and committed with its answer key (commit 18834ab) before this run. Fresh general-purpose subagent, one persona, model not reported. Its only input was a single scratch file holding the text below the --- line of planner-prompt.v2.md (sha256 280df20e...) plus the answers JSON; it was told to read only that file. That limit was by instruction, not enforced by the tooling. The reply was saved unmodified and validated with the real validator (VALID on the first try); no plan was edited."
+}

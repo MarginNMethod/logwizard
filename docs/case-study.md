@@ -16,7 +16,7 @@ Plain-language terms: an **eval** runs the AI planner on sample answers and chec
 - A live demo anyone can try with no sign-in and no key: https://logwizard.vercel.app
 - 456 automated tests.
 - A Google engine that I installed and ran in a real Google account. It built the sheet tabs, a Form and two triggers, took entries from the Form and the sidebar, and sent a digest and a follow-up reminder.
-- A 12-person synthetic eval set for the AI planner.
+- A synthetic eval set for the AI planner: 17 personas, 5 of them held out and committed before the run.
 
 **What does not exist.** The web app does not yet sign a visitor in to Google and install the engine for them. Today I install the engine by hand and test it directly. That connecting step is the main unfinished part, and I say so instead of showing a fake end-to-end flow.
 
@@ -50,7 +50,7 @@ Three design rules drove everything (`docs/decisions/`):
 | Engine logic | Routing, reminders, digests, send caps and alerts as pure functions | 85 tests |
 | Apps Script engine | Builds tabs, a Form and triggers, takes entries, sends mail. One 228.7 KB file, 6 OAuth scopes, none restricted | 67 tests, plus real-Google runs |
 | Web app | Interview, plan preview with editing, plan download, Demo mode | 66 tests, live site |
-| Eval set | 12 synthetic personas, recorded plans, a grading runner | 37 tests |
+| Eval set | 17 synthetic personas (5 held out), recorded plans, a grading runner | 37 tests |
 | Metrics | Anonymous funnel events in Supabase, with row-level security and a 90-day cleanup job | Applied and checked on the live project |
 
 **456 tests in total.** They use fake Google services and recorded plans. They do not call Google or an AI.
@@ -85,23 +85,25 @@ A follow-up reminder did not arrive for a row due "tomorrow", and I first read t
 
 ## The AI planner eval, with its limits
 
-Source: `evals/results.md` (prompt v1) and `evals/results.v2.md` (prompt v2).
+Source: `evals/results.md` (v1), `evals/results.v2.md` and `evals/results-notes.v2.md` (v2 and held-out).
 
-| Measure | Prompt v1 | Prompt v2 |
-|---|---|---|
-| Personas recorded | 12 of 12 | 12 of 12 |
-| Valid on first try | 12 of 12 | 12 of 12 |
-| Matches the answer key | 11 of 12 | 12 of 12 |
-| Clean on the diff and the reply-length check | 10 of 12 | 12 of 12 |
-| Invented features | 0 | 0 |
+| Measure | v1 (12 personas) | v2 (12 personas) | v2 held-out (5 new personas) |
+|---|---|---|---|
+| Valid on first try | 12 of 12 | 12 of 12 | 5 of 5 |
+| Matches the answer key | 11 of 12 | 12 of 12 | 5 of 5 |
+| Clean on the diff and the reply-length check | 10 of 12 | 12 of 12 | 5 of 5 |
+| Invented features | 0 | 0 | 0 |
+
+**How the held-out test works.** I wrote five new personas and their answer keys, froze the v2 prompt, and committed both before any planning run (`18834ab`). Each persona was then planned once by a fresh subagent given only the prompt text and the answers. The five cover a clinic with routing, a plan with no routing or digest, a team that gave no contributor emails, unsupported Slack and chart requests, and a Berlin time zone. The planner invented no contributors, refused Slack and the chart, and used the right zone and digest time.
 
 Caveats that go with every quote of these numbers:
 
-- **Not an API measurement.** The recordings were made by Claude Code subagents on an existing Claude Code plan. No paid Anthropic API was called (ADR 0005).
-- **v2 is in-sample.** I wrote the v2 prompt after seeing the v1 results on these same 12 personas, and two of its changes target the two v1 problems directly. It shows those problems are fixed. It does not show the planner generalises. A fair test needs new personas written after v2 was frozen, ideally by someone other than the prompt author.
-- **One run per persona.** The results describe what one run produced, not how often the prompt succeeds.
+- **Not an API measurement.** Claude Code subagents made the recordings on an existing Claude Code plan. No paid Anthropic API was called (ADR 0005).
+- **Not independent.** The held-out personas, their keys and the prompt all came from the same author, and the held-out set is only five cases. It removes the objection that the planner was graded on cases it was tuned on. It does not show the planner is reliable.
+- **One run per persona.** There is no measure of run-to-run variation.
+- **Isolation was by instruction.** The subagents were told to read only one file, and the tooling did not enforce it.
 - **The v1 answer key changed once after the first run.** A career-center label was loosened to accept the persona's own wording. The planner was not changed. This moved the v1 diff-clean count from 10 to 11.
-- **Small set, same author.** The personas and the prompt came from the same person.
+- **One expectation was not met as written.** For the team with no emails I expected the planner to ask follow-up questions. It asked none, omitted contributors and said so. The diff accepted that, and I note it here.
 
 ---
 
@@ -112,7 +114,7 @@ Caveats that go with every quote of these numbers:
 | The AI never writes code that runs in an account | Held by design. The engine is fixed code. |
 | A hiring manager can try it without signing in | Met. Live Demo mode. |
 | Zero cost | Met so far. Vercel Hobby, Supabase Free, no billing on Google Cloud (a human check, not yet confirmed from the console). |
-| Plan validation catches bad plans | Met on 201 schema tests and the 12-persona eval. |
+| Plan validation catches bad plans | Met on 201 schema tests and the 17-persona eval. |
 | Setup in under 20 minutes (G-1) | **Not measured.** It needs the connecting step that is not built. |
 | Hand-built setup time, per system, and the manual step count | **TO MEASURE.** Left empty on purpose. See below. |
 
@@ -142,6 +144,6 @@ I built the system by hand five times (`PLAN.md` section 1) but did not record t
 
 1. **Run the real Google test earlier.** The formula bug, the missing email scope and the two-account failure surfaced only in the real run. Offline tests could not have caught them.
 2. **Freeze the answer key before the first eval run.** I loosened one v1 label after seeing a result. A key fixed in advance is stronger evidence.
-3. **Write held-out test cases first.** v2 was tuned and graded on the same 12 personas. New personas written before the prompt would give a fair test.
+3. **Write held-out test cases before the prompt.** I wrote the held-out five after tuning v2, so they test generalisation only partly. An independent author would be stronger.
 4. **Time the hand-built systems when I made them.** The before-time is the number a reader most wants, and I cannot supply it honestly.
 5. **Update the fake with every real-Google surprise.** I did this for formulas, so each lesson stays in the suite.
