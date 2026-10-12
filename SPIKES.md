@@ -174,3 +174,6 @@ These match the five pinned scopes (`spreadsheets.currentonly`, `forms`, `send_m
 - **Weekly digest: passed.** With send hours set to 0, one digest email arrived on the first `hourlyTick` ("2 new, 1 upcoming, 0 overdue"). A second run sent no second digest.
 - **Follow-up reminder: passed.** A row with follow-up date 2026-10-12 was correctly not sent on 2026-10-12 (due date is the follow-up date minus 1 day). After changing it to 2026-10-13, `hourlyTick` sent exactly one email; a second run sent none.
 - **Not covered:** the 80% and 100% daily send-limit paths, a Workspace account, a form-submit by a second Google account in this session.
+
+**Sidebar identity re-test (second H2 session): passed**
+After adding the `userinfo.email` scope and re-pushing, a sidebar entry saved by the owner in a private window showed `Entered by` = the owner's email (not `unknown`), and no new-entry alert email arrived for it. The collaborator case (a second account as editor) was not tested in real Google.
