@@ -210,7 +210,7 @@ Daily caps (`DAILY_CAPS`, `dailyCapFor`): 100 for `gmail.com` and `googlemail.co
 
 ### 3.6 OAuth scopes
 
-Five scopes, pinned in `apps-script/appsscript.json` and checked by `apps-script/check.mjs` at build time: `spreadsheets.currentonly`, `forms`, `script.scriptapp`, `script.send_mail`, `script.container.ui`. None is a restricted scope (`apps-script/README.md`).
+Six scopes, pinned in `apps-script/appsscript.json` and checked by `apps-script/check.mjs` at build time: `spreadsheets.currentonly`, `forms`, `script.scriptapp`, `script.send_mail`, `script.container.ui`, `userinfo.email` (added after the second H2 run: without it Google returned a blank sidebar user, so the owner's entries were recorded as `unknown`). None is a restricted scope (`apps-script/README.md`).
 
 ---
 

@@ -193,6 +193,8 @@ You do this in the **test Google account** only. The team writes the exact numbe
 
 Why only you: this is a Google sign-in and a permission prompt, which the team cannot click through for you.
 
+Use **one** Google account while you do this (or a private window signed in to just that account). If two accounts are signed in to the same browser, Google can reject the sidebar's Save button with `PERMISSION_DENIED`. The Form and the menu items are not affected.
+
 ---
 
 ## 5. H3: Final timed run (about 20 minutes, after Phases 3 and 4)

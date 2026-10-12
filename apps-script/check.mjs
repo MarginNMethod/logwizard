@@ -17,6 +17,7 @@ const ALLOWED = new Set([
   "https://www.googleapis.com/auth/script.scriptapp",
   "https://www.googleapis.com/auth/script.send_mail",
   "https://www.googleapis.com/auth/script.container.ui",
+  "https://www.googleapis.com/auth/userinfo.email",
 ]);
 for (const s of manifest.oauthScopes ?? []) if (!ALLOWED.has(s)) problems.push(`unexpected OAuth scope ${s}`);
 if (manifest.runtimeVersion !== "V8") problems.push("runtimeVersion must be V8");
