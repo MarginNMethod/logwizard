@@ -9,12 +9,12 @@ Last updated: 2026-10-11.
 | # | Topic | Status |
 |---|---|---|
 | 1 | Template copy with `drive.file` | Partly |
-| 2 | Bound script comes along and runs | Pending |
-| 3 | Permission prompt in testing mode | Pending |
-| 4 | Identifying the submitter | Pending |
+| 2 | Bound script comes along and runs | Partly (script created bound to a sheet via clasp, runs; copy-by-app not tested) |
+| 3 | Permission prompt in testing mode | Partly (owner prompt seen; list not read; contributor path done) |
+| 4 | Identifying the submitter | Partly (personal accounts only; Workspace not tested) |
 | 5 | Email limits | Done |
 | 6 | Anthropic model and structured output | Done (structured output detail pending) |
-| 7 | Minimal OAuth scopes | Partly |
+| 7 | Minimal OAuth scopes | Done for the engine's own functions (five scopes were enough) |
 
 ---
 
@@ -122,3 +122,32 @@ Last updated: 2026-10-11.
 - **Partly answered:** 1 (copy method) and 7 (scopes). Both have a clear next test.
 - **Blocked on Aaron:** 2, 3, 4. They need the test Google account and OAuth consent screen from the checklist in `PLAN.md` section 10.
 - **One design risk to watch:** if methods (a) and (b) in Spike 1 both fail, the real Google build falls back to a "Make a copy" link plus pasted plan. Demo mode is unaffected.
+
+
+---
+
+## Hands-on results (H2 session, 2026-10-12)
+
+Run in two personal Google accounts: an "owner" account and a second "contributor" account. The engine was pushed with `clasp` to a script bound to a new test spreadsheet. Offline unit tests use fakes; these are the first results from real Google.
+
+**Worked as designed**
+- **Bundle and menu.** The one-file bundle loaded. The custom menu was named from the plan and had all five items. `onOpen` built it by reading `_plan` (H2 check 1).
+- **Scopes.** The five pinned scopes were enough for everything run: Activate, Form creation, trigger install, form-submit handling, routing, and sending the test email. No extra scope was asked for. The Apps Script API setting must be on for the account that runs `clasp` (it is per account).
+- **Activate.** It created the `Activity`, `Setup`, `All Employers` and `Education Log` tabs, headers, choice dropdowns, one Google Form and 2 triggers, and wrote the form link to `Setup`. Its confirmation dialog appeared.
+- **Form submit as owner.** The form-submit trigger wrote a row, normalised the date to `YYYY-MM-DD` text, joined the multi-choice area as `Education, Arts`, and routed a copy to `Education Log` with the same entry ID.
+- **Contributor path (Spike 3).** The second account opened and submitted the form with **no authorization prompt**, and the row was written by the owner's trigger.
+- **Submitter identity (Spike 4, personal accounts).** The form shows a checkbox to record the signed-in email. With it ticked, `Entered by` held the account's email for both the owner and the contributor, with no `(unverified)` flag. A required "Your name" question is also shown.
+- **Test reminder (Spike 5, partly).** `Send test reminder` sent an email to the owner with only the `send_mail` scope. The daily limit shown on `Setup` was 100 for a gmail.com owner.
+
+**Not tested yet**
+- The sidebar (Add entry), the hourly check running on its own, a real follow-up reminder, and the weekly digest.
+- Whether the owner alert email for the contributor entry arrived. The Activity tab does not log successful alerts; the owner should check the inbox.
+- Cells beginning with `=` or `-` written as plain text (H2 checks 6, 18), and the "- Other -" option under list validation.
+- The exact permission list Google showed on the first run, and the unverified-app wording.
+- A Workspace account, and `Session.getActiveUser()` behaviour.
+- Re-running Activate (idempotence) against real Google.
+
+**Surprises**
+- The first-run authorization appeared when the script was run from the editor, before the menu was used.
+- A helper that opens an alert from the editor fails (`getUi` only works from the sheet). It only affected the test helper.
+- Google Forms on personal accounts used a "Record email" checkbox, not the verified collection mode the code asks for. The code's fallback and the unverified logic did not trigger. Workspace behaviour is unknown.
