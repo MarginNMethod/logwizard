@@ -151,3 +151,9 @@ Run in two personal Google accounts: an "owner" account and a second "contributo
 - The first-run authorization appeared when the script was run from the editor, before the menu was used.
 - A helper that opens an alert from the editor fails (`getUi` only works from the sheet). It only affected the test helper.
 - Google Forms on personal accounts used a "Record email" checkbox, not the verified collection mode the code asks for. The code's fallback and the unverified logic did not trigger. Workspace behaviour is unknown.
+
+**Follow-up: formula injection (found and fixed, same day)**
+- **Finding.** A form answer of `=SUM(A1)` in Organization was evaluated by Google and showed `0`, even in a plain-text formatted column. The first fix (text format only) was unsafe.
+- **Fix.** Every data cell starting with `=`, `+`, `-` or `@` now gets a leading apostrophe, except a value that is exactly a list option. Reading strips it. 15 new tests, 67 in the Apps Script package.
+- **Re-test in real Google.** After `clasp push`, the same `=SUM(A1)` through the form was stored as text. The cell shows `=SUM(A1)` and the formula bar shows `'=SUM(A1)`. No visible apostrophe in the cell. Passed.
+- **Still open.** Real-Google behaviour for `+`, `-` and `@` starts, and the hourly reminder and weekly digest sends.
