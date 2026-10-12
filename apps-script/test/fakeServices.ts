@@ -37,7 +37,17 @@ export class FakeServices implements Services {
   failMail = false;
   /** Every appendRows call, for asserting what was written. */
   writes: { tab: string; rows: string[][] }[] = [];
+  /**
+   * REAL Google behaviour (found at H2): setValues treats any string starting with "=" as a formula, EVEN in a
+   * cell formatted "@". Every such write is recorded here. A safe engine leaves this empty.
+   */
+  formulaCells: { tab: string; row: number; col: number; value: string }[] = [];
   private seq = 0;
+  private mark(tab: string, rows: string[][], firstRow: number) {
+    rows.forEach((r, i) => r.forEach((v, j) => {
+      if (typeof v === "string" && v.startsWith("=")) this.formulaCells.push({ tab, row: firstRow + i, col: j + 1, value: v });
+    }));
+  }
 
   constructor(plan?: Plan | string | null) {
     if (plan !== null) this.setPlan(plan ?? makePlan());
@@ -58,13 +68,19 @@ export class FakeServices implements Services {
   setSpreadsheetTimeZone(tz: string) { this.tz = tz; }
   ensureLogTab(spec: LogTabSpec) {
     const created = !this.tabs.has(spec.name);
-    if (created) this.tabs.set(spec.name, [spec.headers]);
+    if (created) {
+      this.tabs.set(spec.name, [spec.headers]);
+      this.mark(spec.name, [spec.headers], 1);
+    }
     this.logTabSpecs.set(spec.name, spec);
     const head = this.tabs.get(spec.name)![0]!;
     return { created, headerMismatch: head.join("|") !== spec.headers.join("|") };
   }
   ensureInfoTab(name: string, headers: string[]) {
-    if (!this.tabs.has(name)) this.tabs.set(name, [headers]);
+    if (!this.tabs.has(name)) {
+      this.tabs.set(name, [headers]);
+      this.mark(name, [headers], 1);
+    }
   }
   readHeaders(tab: string) {
     const t = this.tabs.get(tab);
@@ -73,7 +89,10 @@ export class FakeServices implements Services {
     while (h.length && h[h.length - 1] === "") h.pop();
     return h.length ? h : null;
   }
-  appendHeaders(tab: string, extra: string[]) { this.tabs.get(tab)![0]!.push(...extra); }
+  appendHeaders(tab: string, extra: string[]) {
+    this.mark(tab, [extra], 1);
+    this.tabs.get(tab)![0]!.push(...extra);
+  }
   remainingQuota = () => this.quota;
   listFormResponses(formId: string, sinceIso: string): FormSubmission[] {
     return (this.responses.get(formId) ?? []).filter((r) => r.timestamp >= sinceIso);
@@ -83,9 +102,13 @@ export class FakeServices implements Services {
     const t = this.tabs.get(tab);
     if (!t) throw new Error(`no tab ${tab}`);
     this.writes.push({ tab, rows });
+    this.mark(tab, rows, t.length + 1);
     for (const r of rows) t.push([...r]);
   }
-  replaceSetup(rows: string[][]) { this.tabs.set("Setup", rows); }
+  replaceSetup(rows: string[][]) {
+    this.mark("Setup", rows, 1);
+    this.tabs.set("Setup", rows);
+  }
   withLock<T>(fn: () => T): T {
     this.lockCalls++;
     if (this.locked || this.lockFailures > 0) {

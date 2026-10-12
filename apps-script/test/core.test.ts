@@ -152,9 +152,8 @@ describe("adding entries and routing", () => {
       submitterEmail: "owner@example.com", submitterName: "", seed: "s1", submittedAt: "2026-03-01T14:00:00.000Z",
     });
     expect(r.ok).toBe(true);
-    // Q2: log tabs are formatted as plain text ("@"), so the format alone keeps a formula inert and no apostrophe is added.
-    // (The old expectation of an apostrophe prefix in log tabs was the bug: it broke strictly validated list cells.)
-    expect(svc.readRows("All Employers")[0]![3]).toBe("=HYPERLINK(\"http://x.example.com\",\"hi\")");
+    // H2: real Google evaluates a leading "=" even in an "@" cell, so a protective apostrophe is written (options of strict list columns excepted).
+    expect(svc.readRows("All Employers")[0]![3]).toBe("'=HYPERLINK(\"http://x.example.com\",\"hi\")");
     // a formula-like name in the Activity message is neutralised too
     expect(svc.activity().every((r) => !/^[=+\-@]/.test(r[2]!))).toBe(true);
   });
@@ -164,7 +163,7 @@ describe("adding entries and routing", () => {
     addEntry(svc, loadOk(svc), { logId: "main", raw: { ...raw, org_name: "=Acme" }, submitterEmail: "owner@example.com", submitterName: "", seed: "s2", submittedAt: "2026-03-01T14:00:00.000Z" });
     svc.tabs.set("Arts Log", [svc.tabs.get("Arts Log")![0]!]);
     runRoutingNow(svc);
-    expect(svc.readRows("Arts Log")[0]![3]).toBe("=Acme"); // Q2: stored raw in the plain-text cell
+    expect(svc.readRows("Arts Log")[0]![3]).toBe("'=Acme"); // read back strips the one apostrophe, the copy gets exactly one
   });
 });
 

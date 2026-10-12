@@ -8,7 +8,6 @@ import {
   buildDigest,
   digestsToSend,
   dueReminders,
-  entryToCells,
   headersForLog,
   logFields,
   makeEntryId,
@@ -133,8 +132,34 @@ const alignRow = (cells: string[], lay: { map: number[]; width: number }): strin
   return out;
 };
 
-/** The engine's sanitiser prefixes an apostrophe to formula-like text. Log tabs are plain-text formatted, so drop it there. */
-const unprefix = (cell: string): string => (/^'(?:[ \u00a0]*[=+\-@]|[\t\r])/.test(cell) ? cell.slice(1) : cell);
+// Real Google evaluates a string starting with "=" passed to setValues even in an "@" (plain text) cell (H2 finding),
+// so every data cell is protected here with one leading apostrophe. Rule: a cell needs the apostrophe when, after any
+// leading apostrophes, it starts with optional spaces/nbsp then = + - @, or with a tab or CR. Reading strips exactly
+// one apostrophe from a cell that matches the same pattern, so a literal "'=x" is stored as "''=x" and reads back as "'=x".
+const GUARDED = /^'*(?:[ \u00a0]*[=+\-@]|[\t\r])/;
+const unprefix = (cell: string): string => (cell.startsWith("'") && GUARDED.test(cell) ? cell.slice(1) : cell);
+
+/** Control-stripped text of a value, before any protective apostrophe (same text the engine sanitiser works on). */
+const plainText = (v: unknown): string => {
+  if (typeof v === "string" || Array.isArray(v)) return sanitizeCellValue(`~${Array.isArray(v) ? v.map(String).join(", ") : v}`).slice(1);
+  return sanitizeCellValue(v);
+};
+
+/**
+ * Cells for one row in header order, ready for setValues. Meta and field text get the protective apostrophe,
+ * except a value that is exactly one of the allowed options of a strict list column (choice, yes_no): the plan
+ * validator already vetted those, and an apostrophe would make them fail the list validation.
+ */
+function protectedCells(plan: Plan, logId: string, entry: Entry): string[] {
+  const options = new Map<number, Set<string>>();
+  for (const r of rulesFor(plan, logId)) if (r.kind === "list") options.set(r.column - 1, new Set(r.options ?? []));
+  const raw = [entry.id, entry.enteredBy, entry.enteredAt ?? "", ...logFields(plan, logId).map((f) => entry.values[f.key])];
+  return raw.map((v, i) => {
+    const t = plainText(v);
+    if (!GUARDED.test(t)) return t;
+    return options.get(i)?.has(t) && !t.startsWith("'") ? t : `'${t}`;
+  });
+}
 
 export type LoadResult = { ok: true; plan: Plan } | { ok: false; message: string };
 
@@ -324,7 +349,7 @@ function parseValue(f: PlanField, raw: string, onBadDate?: (label: string) => vo
 export function rowToEntry(plan: Plan, logId: string, row: string[], headers?: string[], onBadDate?: (label: string) => void): Entry {
   const expected = headersForLog(plan, logId);
   const map = headers ? columnMap(headers, expected) : null;
-  const cell = (i: number): string => row[map ? map[i]! : i] ?? "";
+  const cell = (i: number): string => unprefix(row[map ? map[i]! : i] ?? "");
   const values: Record<string, EntryValue> = {};
   logFields(plan, logId).forEach((f, i) => {
     values[f.key] = parseValue(f, cell(META_HEADERS.length + i), onBadDate);
@@ -578,7 +603,7 @@ export function addEntry(svc: Services, plan: Plan, ne: NewEntry): AddResult {
       duplicate = true;
       return;
     }
-    svc.appendRows(log.name, [alignRow(entryToCells(plan, log.id, entry).map(unprefix), lay)]);
+    svc.appendRows(log.name, [alignRow(protectedCells(plan, log.id, entry), lay)]);
     const rp = planRouting(plan, log.id, entry, existing);
     for (const row of rp.rows) {
       const target = plan.logs.find((l) => l.id === row.logId);
@@ -588,7 +613,7 @@ export function addEntry(svc: Services, plan: Plan, ne: NewEntry): AddResult {
         skipped.push(tl.message);
         continue;
       }
-      svc.appendRows(target.name, [alignRow(row.cells.map(unprefix), tl)]);
+      svc.appendRows(target.name, [alignRow(protectedCells(plan, row.logId, entry), tl)]);
       routed.push(target.name);
     }
   });
@@ -719,7 +744,7 @@ export function runRoutingNow(svc: Services): string {
             if (!problems.includes(tl.message)) problems.push(tl.message);
             continue;
           }
-          svc.appendRows(target.name, [alignRow(out.cells.map(unprefix), tl)]);
+          svc.appendRows(target.name, [alignRow(protectedCells(plan, out.logId, entry), tl)]);
           existing[out.logId]?.add(out.entryId);
           copied++;
         }

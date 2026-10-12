@@ -317,20 +317,21 @@ describe("A13 sidebar accessibility", () => {
 });
 
 describe("Q2 text cells", () => {
-  it("writes formula-looking and list option text raw into @ cells and reads it back", () => {
+  it("protects formula-looking text with one apostrophe, leaves a list option raw, and reads both back", () => {
     const plan = makePlan();
     plan.logs[0]!.fields![2]!.options = ["Email", "Call", "Meeting", "Event", "- Other -"];
     const svc = activated(plan);
     handleFormSubmission(svc, { ...submission(), answers: { ...submission().answers, Organization: "=SUM(A1)", "Interaction type": "- Other -" } });
     const head = svc.tabs.get("All Employers")![0]!;
     const row = svc.readRows("All Employers")[0]!;
-    expect(row[head.indexOf("Organization")]).toBe("=SUM(A1)");
+    // old expectation (raw "=SUM(A1)") was the H2 bug: real Google evaluates it even in an "@" cell
+    expect(row[head.indexOf("Organization")]).toBe("'=SUM(A1)");
     expect(row[head.indexOf("Interaction type")]).toBe("- Other -");
     const rule = svc.logTabSpecs.get("All Employers")!.rules.find((r) => r.kind === "list" && r.column === head.indexOf("Interaction type") + 1)!;
     expect(rule.options).toContain(row[head.indexOf("Interaction type")]);
     expect(rowToEntry(plainPlan(svc), "main", row, head).values.org_name).toBe("=SUM(A1)");
-    // routed copy is raw too
-    expect(svc.readRows("Education Log")[0]![head.indexOf("Organization")]).toBe("=SUM(A1)");
+    // routed copy is protected the same way, with no doubled apostrophe
+    expect(svc.readRows("Education Log")[0]![head.indexOf("Organization")]).toBe("'=SUM(A1)");
     // Activity stays neutralised
     expect(svc.activity().every((r) => !/^[=+\-@]/.test(r[2]!))).toBe(true);
   });
