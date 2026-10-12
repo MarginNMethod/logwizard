@@ -1,0 +1,44 @@
+{
+  "id": "ho-clinic-referrals",
+  "title": "Held-out: physical therapy clinic tracking referral sources",
+  "browser_time_zone": "America/Denver",
+  "answers": {
+    "q1_interaction_kinds": "referring doctors and clinics",
+    "q2_system_name": "Referral Tracker",
+    "q3_details": "Practice name, doctor name, contact email, referral date, referral type (new patient, follow-up, discharge), specialty, next check-in date, notes",
+    "q4_areas": "Orthopedics, Neurology",
+    "q5_multi_area_copy": "Yes, put each referral in the log for its specialty too.",
+    "q6_contributors": "Dana Whitfield (dana.whitfield@example.com), Luis Ortega (luis.ortega@example.com)",
+    "q7_contributor_alert": "Yes, email me when either of them adds a referral.",
+    "q8_follow_up": "Yes, remind me 3 days before the next check-in date.",
+    "q9_weekly_digest": "Yes, Friday at 9am.",
+    "q10_time_zone": "Denver"
+  },
+  "expected": {
+    "log_count": 3,
+    "has_routing": true,
+    "routing_areas": [
+      "Orthopedics",
+      "Neurology"
+    ],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "FRI",
+    "follow_up_reminder_days": 3,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 2,
+    "time_zone": "America/Denver",
+    "field_labels_required": [
+      "Practice name",
+      "Doctor name",
+      "Contact email",
+      "Referral date",
+      "Referral type",
+      "Specialty",
+      "Next check-in date",
+      "Notes"
+    ],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "Held-out. One main log plus one per specialty. The reminder must anchor on the next check-in date field. Digest send_hour 9. The specialty field is what routing keys on."
+  }
+}

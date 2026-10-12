@@ -1,0 +1,38 @@
+{
+  "id": "ho-team-no-emails",
+  "title": "Held-out: manager who says the whole team will add entries but gives no emails",
+  "browser_time_zone": "America/New_York",
+  "answers": {
+    "q1_interaction_kinds": "partner organizations",
+    "q2_system_name": "Partner Contacts",
+    "q3_details": "Organization, contact name, date, type of contact, notes",
+    "q4_areas": "No areas.",
+    "q5_multi_area_copy": "No.",
+    "q6_contributors": "My whole team will use it, about eight people.",
+    "q7_contributor_alert": "Yes, tell me when anyone on the team adds something.",
+    "q8_follow_up": "No.",
+    "q9_weekly_digest": "No.",
+    "q10_time_zone": "Eastern"
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": false,
+    "weekly_digest_day": null,
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": false,
+    "contributor_count": 0,
+    "time_zone": "America/New_York",
+    "field_labels_required": [
+      "Organization",
+      "Contact name",
+      "Date",
+      "Type of contact",
+      "Notes"
+    ],
+    "must_refuse": [],
+    "max_follow_up_questions": 2,
+    "notes": "Held-out. No contributor emails were given, so the planner must not invent any. It may ask up to 2 follow-up questions for the emails. If it still emits a plan it must list zero contributors and no contributor alert (an alert with nobody to alert about is meaningless), so an emitted alert is counted as a miss."
+  }
+}

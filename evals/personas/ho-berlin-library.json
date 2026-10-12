@@ -1,0 +1,43 @@
+{
+  "id": "ho-berlin-library",
+  "title": "Held-out: Berlin library tracking school outreach, options containing commas",
+  "browser_time_zone": "Europe/Berlin",
+  "answers": {
+    "q1_interaction_kinds": "schools and teachers",
+    "q2_system_name": "School Outreach",
+    "q3_details": "School name, teacher, date, contact method (email, phone, in person, letter), grade level (primary, secondary), outcome (booked visit, no reply, declined), notes",
+    "q4_areas": "Primary, Secondary",
+    "q5_multi_area_copy": "Yes, copy into the Primary or Secondary log depending on grade level.",
+    "q6_contributors": "Jonas Keller (jonas.keller@example.com)",
+    "q7_contributor_alert": "Yes, email me when Jonas adds something.",
+    "q8_follow_up": "No follow-up reminders.",
+    "q9_weekly_digest": "Yes, Wednesday at 5pm.",
+    "q10_time_zone": "Berlin time"
+  },
+  "expected": {
+    "log_count": 3,
+    "has_routing": true,
+    "routing_areas": [
+      "Primary",
+      "Secondary"
+    ],
+    "has_weekly_digest": true,
+    "weekly_digest_day": "WED",
+    "follow_up_reminder_days": null,
+    "alert_on_contributor_entry": true,
+    "contributor_count": 1,
+    "time_zone": "Europe/Berlin",
+    "field_labels_required": [
+      "School name",
+      "Teacher",
+      "Date",
+      "Contact method",
+      "Grade level",
+      "Outcome",
+      "Notes"
+    ],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "Held-out. Non-US zone: Europe/Berlin. Digest send_hour 17. Routing keys on the grade level field, whose options are Primary and Secondary. Option lists must not contain commas."
+  }
+}

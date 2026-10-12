@@ -1,0 +1,41 @@
+{
+  "id": "ho-coach-recruiting",
+  "title": "Held-out: high school coach tracking college recruiting contacts",
+  "browser_time_zone": "America/Los_Angeles",
+  "answers": {
+    "q1_interaction_kinds": "college coaches",
+    "q2_system_name": "Recruiting Contacts",
+    "q3_details": "Coach name, school, division (D1, D2, D3, NAIA), email, date of contact, status (interested, waiting, not interested), follow-up date, notes",
+    "q4_areas": "None, everything stays in one list.",
+    "q5_multi_area_copy": "No.",
+    "q6_contributors": "Just me, plus my assistant coach Kim Nakamura (kim.nakamura@example.com)",
+    "q7_contributor_alert": "No alerts needed.",
+    "q8_follow_up": "Yes, remind me a week before the follow-up date.",
+    "q9_weekly_digest": "No digest.",
+    "q10_time_zone": "Pacific"
+  },
+  "expected": {
+    "log_count": 1,
+    "has_routing": false,
+    "routing_areas": [],
+    "has_weekly_digest": false,
+    "weekly_digest_day": null,
+    "follow_up_reminder_days": 7,
+    "alert_on_contributor_entry": false,
+    "contributor_count": 1,
+    "time_zone": "America/Los_Angeles",
+    "field_labels_required": [
+      "Coach name",
+      "School",
+      "Division",
+      "Email",
+      "Date of contact",
+      "Status",
+      "Follow-up date",
+      "Notes"
+    ],
+    "must_refuse": [],
+    "max_follow_up_questions": 0,
+    "notes": "Held-out. No routing, no digest, no alert. The owner is not a contributor; only Kim is. Reminder 7 days before the follow-up date."
+  }
+}
