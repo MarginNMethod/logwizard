@@ -110,14 +110,14 @@ export async function recordEvent(
     if (!sb) return "skipped";
     insert = async (row) => {
       const { error } = await sb.from("funnel_events").insert(row);
-      if (error) throw new Error("insert failed");
+      if (error) throw new Error(`insert failed: ${error.code ?? "no-code"} ${String(error.message ?? "").slice(0, 80)}`);
     };
   }
   try {
     await withTimeout(insert(event));
     return "stored";
-  } catch {
-    console.warn("metrics unavailable; event dropped");
+  } catch (err) {
+    console.warn("metrics unavailable; event dropped", err instanceof Error ? err.message : "unknown");
     return "failed";
   }
 }
