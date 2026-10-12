@@ -34,11 +34,11 @@ Counts are from `CI=1 pnpm -r test` run on 2026-10-11 (exit code 0). Each row is
 | `packages/engine-logic` | `test/digest.test.ts` | 11 | Weekly digest day, time zone, grouping, totals |
 | `packages/engine-logic` | `test/alerts.test.ts` | 8 | Who is alerted, and when |
 | `packages/engine-logic` | `test/sends.test.ts` | 9 | Daily caps, 80 percent warning, deferred sends, duplicates |
-| `apps-script` | `test/core.test.ts`, `test/fixes.test.ts` | 52 | Activate (idempotent, own triggers only, never overwrites a tab, plan edits), form submit, sidebar, routing, hourly tick with reserve-then-send accounting, lock timeouts, daily cap and alert budget, verified email handling, test reminder |
+| `apps-script` | `test/core.test.ts`, `test/fixes.test.ts`, `test/formulaSafety.test.ts` | 67 | Activate (idempotent, own triggers only, never overwrites a tab, plan edits), form submit, sidebar, routing, hourly tick with reserve-then-send accounting, lock timeouts, daily cap and alert budget, verified email handling, test reminder |
 | `apps/web` | `test/planner.test.ts`, `test/caps-ratelimit-events.test.ts`, `test/guards.test.ts`, `test/fixes.test.ts` | 66 | Replay and bring-your-own-key planner (key never logged, server credentials ignored), live mode off by default, input caps, rate limit (client address, fail-open), funnel events, security headers, sample personas replay, repository guards |
 | `evals` | `test/diff.test.ts` | 17 | Diff rules between a plan and its `expected` block |
 | `evals` | `test/runner.test.ts` | 20 | Provenance checks, grading, `results.md` content |
-| **Total** | | **441** | |
+| **Total** | | **456** | |
 
 Notes:
 
@@ -53,7 +53,7 @@ Notes:
 | Check | Result |
 |---|---|
 | `pnpm install --frozen-lockfile` | Already up to date. Lockfile unchanged. |
-| `pnpm --filter @logwizard/apps-script build` | Built `dist/Code.js` (227.8 KB, zod bundled), 5 OAuth scopes, `check.mjs` passed. `dist/` is git-ignored. |
+| `pnpm --filter @logwizard/apps-script build` | Built `dist/Code.js` (228.7 KB on 2026-10-12, zod bundled), 6 OAuth scopes, `check.mjs` passed. `dist/` is git-ignored. |
 | `pnpm --filter @logwizard/web dev` with no `.env.local` | `/` returns 200, `/start` returns 200, `/privacy` returns 200. |
 | `POST /api/plan` with the sample persona `career-center` answers | `ok: true`, `mode: replay`, `validation_result: pass`, `retry_count: 0`. Four logs in the plan. |
 
@@ -215,11 +215,11 @@ The team lead records each tester's pass or fail and their sentence in the next 
 | Area | Status | Why it matters |
 |---|---|---|
 | Google sign-in and the Drive copy of the template | Not built (Phase 4) | Required for the real product |
-| Activate, the permission prompt, and the triggers in a real Google account | Not tested. Spikes 1 to 4 are pending. | The engine is tested only with fake services |
-| Form submit as a contributor, identity in "Entered by" | Not tested. Spike 4 pending. | Decides the fallback "Your name" question |
-| Email delivery and the daily cap in a real account | Not tested. Spike 5 is documented, not run. | Reminders and alerts depend on it |
+| Activate, the permission prompt, and the triggers in a real Google account | Tested by hand on 2026-10-12 in a personal Gmail account (`SPIKES.md`). Not tested: a Workspace account. | Fake-service tests cannot show what Google really does |
+| Form submit as a contributor, identity in "Entered by" | Tested by hand (personal Gmail). Workspace not tested. | Decides the fallback "Your name" question |
+| Email delivery and the daily cap in a real account | Alert, test reminder, follow-up reminder and weekly digest emails were received. The 80% and 100% cap paths are not tested in real Google. | Reminders and alerts depend on it |
 | WCAG 2.1 AA (requirement N-5) | Not audited. The UAT in section 5 uses keyboard-only for T3 only. | Required by the requirements |
 | Live planner calls | Not run. No key, no paid call (ADR 0005). | Recordings were made by subagents, not the API |
-| Supabase metrics writes | Tested with stubs. Not checked against a live project. | Optional; the app must work without it |
+| Supabase metrics writes | Tested with stubs, and checked once against the live project on 2026-10-12 (one test event stored, then deleted). | Optional; the app must work without it |
 | Eval numbers beyond 12 personas and one run | Not measured | See 4.4 |
 | The end-to-end time target (under 20 minutes) | Not measured. Planned for H3. | Case study placeholder |

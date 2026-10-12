@@ -1,10 +1,14 @@
 # LogWizard
 
-**Working name.** The final name is not decided (`docs/OPEN_ITEMS.md`, item 2).
+**Working name.** The final name is not decided (`docs/OPEN_ITEMS.md`).
 
-LogWizard is a web app that sets up an interaction-logging system in a person's own Google account. An interaction log is a spreadsheet where each row records one contact, such as an email with an employer. The system adds an entry form, copies entries between related logs, sends follow-up reminders, and alerts the owner when someone else adds an entry.
+**Live demo (no sign-in, no key): https://logwizard.vercel.app**
 
-The app is modeled on a system built by hand five times for a university career center. It is a portfolio project. It costs nothing to build or run (`docs/decisions/0005-zero-cost.md`).
+LogWizard is a web app that sets up an interaction-logging system in a person's own Google account. An interaction log is a spreadsheet where each row records one contact, such as an email with an employer. The system adds an entry form, copies entries between related logs, sends follow-up reminders and a weekly digest, and alerts the owner when someone else adds an entry.
+
+It is modeled on a system built by hand five times for a university career center. It is a portfolio project, not a product. It costs nothing to build or run (`docs/decisions/0005-zero-cost.md`).
+
+Start with `docs/case-study.md` for the story, or `docs/FINAL_REVIEW.md` for what is proven and what is not.
 
 ---
 
@@ -16,41 +20,48 @@ The AI never writes code that runs in a user's account. A bad plan can be caught
 
 ---
 
-## Status
+## What is proven, and what is not
 
-Read this as of 2026-10-11.
+Read this section before quoting any claim from this repository. Dates are 2026-10-12.
 
-**Built**
+**Built and tested offline**
 
-- Plan schema and validator (`packages/plan-schema`).
-- Routing, reminder, digest, send-cap, and alert logic as pure functions (`packages/engine-logic`).
-- Apps Script engine, bundled into one file (`apps-script`).
-- Web app: interview, plan preview with editing, plan download, and Demo mode (`apps/web`).
-- Eval set with 12 synthetic personas and recorded plans (`evals`).
-- Metrics migrations for Supabase, written (`supabase`). Whether they have been applied to a project is not verified.
+- Plan schema and validator, with hardening found by independent review (`packages/plan-schema`, 201 tests).
+- Routing, reminder, digest, send-cap and alert logic as pure functions (`packages/engine-logic`, 85 tests).
+- Apps Script engine, bundled into one 228.7 KB file with 6 OAuth scopes (`apps-script`, 67 tests).
+- Web app: interview, plan preview with editing, plan download, Demo mode (`apps/web`, 66 tests).
+- Eval set: 12 synthetic personas, recorded plans, a grading runner (`evals`, 37 tests).
+- **456 tests in total** (`CI=1 pnpm -r test`). They use fake Google services and recorded plans. They do not call Google or an AI.
 
-**Verified**
+**Proven by hand in a real Google account (personal Gmail, 2026-10-12)**
 
-- 441 unit tests pass across the five packages with tests (`CI=1 pnpm -r test`, run 2026-10-11).
-- The Apps Script bundle builds, with 5 OAuth scopes, and the build check passes.
-- The web app runs in demo mode with no environment variables. Its pages return 200 and a sample plan validates on the first try.
-- Eval results: 12 of 12 recorded plans valid on the first try, 11 of 12 match the answer key, 10 of 12 are clean on both checks (`evals/results.md`). These are not API measurements.
+- Activate builds the tabs, the Google Form and 2 triggers, and a second Activate changes nothing.
+- A contributor can submit through the Form with no permission prompt. The owner gets an alert email.
+- The sidebar saves an entry to the log and its routed copy.
+- The weekly digest and a follow-up reminder each arrived once, and a second run sent no duplicates.
+- Google's first-run permission list showed exactly five permissions, none broad.
+- A real bug that the offline tests missed: a form answer of `=SUM(A1)` was evaluated as a formula. It is fixed and re-tested in real Google (`SPIKES.md`).
 
-**Not yet tested**
+**Live and checked**
 
-- Google sign-in, the Drive copy of the template, and the Activate step. Phase 4 is not built.
-- The Google behaviours the engine depends on (permission prompt, form submitter identity, email sending). Spikes 1 to 4 are pending (`SPIKES.md`).
+- The demo site and the anonymous metrics database (Vercel Hobby, Supabase Free) are live, and one test event was stored and then deleted. No emails, answers or plans are stored (`docs/privacy.md`).
+
+**Not done, not tested**
+
+- **The step that connects the web app to Google is not built.** There is no Google sign-in in the web app, and it does not copy the template or install the engine for a visitor. Today the engine is installed by hand with `clasp` and tested directly. This is the main gap between the demo and the full product (`PLAN.md`, Phase 4).
+- A Google Workspace account, a second Google account using the sidebar, and the daily send-limit warning paths have not been tested in real Google.
+- The planner has only run on plans recorded by Claude Code subagents. No live model call was made, by design.
+- Eval numbers are in-sample (same author for the prompt and the personas). See `evals/results.v2.md`.
 - Accessibility (WCAG 2.1 AA) has not been audited.
-- The planner has only been run on recorded plans. No live model call has been made.
-- Microsoft: design only (`docs/MICROSOFT_ADAPTER.md`). Nothing is built.
-
-See `docs/test-plan.md` for the full picture, and `docs/traceability.md` for requirement-by-requirement status.
+- The recorded video walkthrough and the sample sheet link do not exist yet (`docs/demo-script.md`).
+- Microsoft: design only (`docs/MICROSOFT_ADAPTER.md`).
+- The measured before and after setup times for the case study (see the case study).
 
 ---
 
 ## Try it
 
-Demo mode needs no Google sign-in and no API key.
+Demo mode needs no Google sign-in and no API key. Use the live site above, or run it locally:
 
 ```bash
 pnpm install
@@ -80,28 +91,30 @@ Screenshot placeholder: `docs/screenshots/demo-plan-preview.png` (not yet captur
 | `apps/web` | Next.js web app: interview, preview, Demo mode, API routes |
 | `packages/plan-schema` | Zod schema, limits, validator, plain-English summary, fixtures, tests |
 | `packages/engine-logic` | Pure routing, reminder, digest, send-cap, and alert logic, with tests |
-| `apps-script` | The Google Apps Script engine (TypeScript source, esbuild bundle, build check) |
-| `evals` | Personas, planner prompt, recordings, eval runner, `results.md` |
+| `apps-script` | The Google Apps Script engine (TypeScript source, esbuild bundle, build check, manual Google test script) |
+| `evals` | Personas, planner prompts (v1, v2), recordings, eval runner, results |
 | `supabase` | Anonymous metrics migrations and the server contract |
-| `docs` | Requirements, user stories, data model, test plan, traceability, privacy, setup guide, demo script, case study, Microsoft design |
+| `docs` | Requirements, user stories, data model, test plan, traceability, privacy, setup guide, demo script, case study, final review, Microsoft design |
 | `docs/decisions` | Decision records (ADRs) |
 | `docs/gates` | Gate reports from the build |
 | `PLAN.md` | The build plan |
-| `SPIKES.md` | Phase 0 spike results (Google behaviour checks) |
+| `SPIKES.md` | Google behaviour checks, including the hands-on results |
 | `AUDIT.md` | Review of the first draft of the plan |
 
 ## Documentation
 
+- Case study (the story for a reader who is not an engineer): `docs/case-study.md`
+- What is proven and what is not, plus the review of these documents: `docs/FINAL_REVIEW.md`
 - Problem, users, goals, and requirements: `docs/requirements.md`
 - User stories: `docs/user-stories.md`
 - Data model (plan schema and sheet structure): `docs/data-model.md`
 - Test plan, eval set, and UAT script: `docs/test-plan.md`
 - Requirement traceability: `docs/traceability.md`
 - Demo walkthrough (3 minutes): `docs/demo-script.md`
-- Case study (skeleton, with measurements still to be taken): `docs/case-study.md`
 - Microsoft adapter design: `docs/MICROSOFT_ADAPTER.md`
 - Privacy: `docs/privacy.md`
 - Setup steps only the owner can do: `docs/setup-guide.md`
+- Open decisions: `docs/OPEN_ITEMS.md`
 - Decisions: `docs/decisions/`
 
 ## Privacy and zero cost, in short

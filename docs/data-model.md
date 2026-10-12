@@ -2,7 +2,7 @@
 
 Status: describes the code as it stood on 2026-10-11. Sources are cited inline: `packages/plan-schema/src/` (the plan), `packages/engine-logic/src/` (entries, routing, reminders), `apps-script/src/core.ts` and `apps-script/src/google.ts` (the sheet, form, triggers, and properties), and `supabase/migrations/` (metrics).
 
-The Google sheet build has not been tested in a real Google account. Spikes 1 to 4 are pending (`SPIKES.md`). Everything below about the sheet comes from the code and its fake-service tests, not from a live run.
+The engine was run by hand in a real personal Gmail account on 2026-10-12 (`SPIKES.md`, "Hands-on results"). The step that copies a template and installs the engine for a visitor (Phase 4) is not built. Workspace accounts are untested. Most of what is described below is covered by fake-service tests, and the hand run confirmed Activate, the Form, the sidebar, the digest and a follow-up reminder.
 
 ---
 
@@ -197,7 +197,7 @@ A copy log has the same columns as the base log it copies (`logFields`). Each lo
 | `sent:<YYYY-MM-DD>` | JSON array of send keys | `deliver` | Stops a reminder being sent twice. Keys older than 2 days are pruned. |
 | `capNotice` | `<date>\|<warn or limit>` | `deliver` | One Activity warning per day at 80 percent, and one when emails are deferred |
 
-Daily caps (`DAILY_CAPS`, `dailyCapFor`): 100 for `gmail.com` and `googlemail.com` owners, 1500 for other addresses. The caps come from `SPIKES.md` Spike 5 and are not yet tested against real sending.
+Daily caps (`DAILY_CAPS`, `dailyCapFor`): 100 for `gmail.com` and `googlemail.com` owners, 1500 for other addresses. The caps come from `SPIKES.md` Spike 5 and are documented limits. In real Google, the alert, test reminder, follow-up and digest emails all sent normally. The 80% and 100% cap paths are not tested in real Google.
 
 ### 3.5 Triggers
 
@@ -247,9 +247,9 @@ erDiagram
 |---|---|---|
 | Copies are snapshots, not live links | By design, documented | PLAN.md section 4 |
 | `Setup` is rewritten on each Activate | By design | `google.ts`, `replaceSetup` |
-| Submitter identity (`Entered by`) on personal and Workspace accounts | Pending, Spike 4 | `SPIKES.md` |
-| Whether Google shows the leading apostrophe in a formula-safe cell | Pending, H2 check 6 | `apps-script/README.md` |
-| Form trigger runs as the owner, contributors see no prompt | Pending, Spike 3 | ADR 0003 |
-| Every behaviour above was tested with fake services, not real Google Sheets | True today | `apps-script/test/fakeServices.ts` |
+| Submitter identity (`Entered by`) on personal and Workspace accounts | Personal account done: the Form email checkbox and the sidebar (with `userinfo.email`) both recorded the email. Workspace pending. | `SPIKES.md` |
+| Whether Google shows the leading apostrophe in a formula-safe cell | Confirmed: the cell shows no apostrophe and stays text (H2 check 22) | `SPIKES.md` |
+| Form trigger runs as the owner, contributors see no prompt | Confirmed on a personal account: contributors see no prompt (`SPIKES.md`) | ADR 0003 |
+| Most behaviour above was tested with fake services. The real-Google run covered Activate, Form submit, sidebar, digest and follow-up | Partly true today | `apps-script/test/fakeServices.ts` |
 | Unassigned Unicode characters are not rejected | Accepted for now | ADR 0007 |
 </content>

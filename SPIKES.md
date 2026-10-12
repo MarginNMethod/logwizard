@@ -4,17 +4,17 @@ Each spike records: question, what was tried, result, decision.
 
 Status key: **Done** (answered from official docs), **Partly** (docs answered part, a hands-on test is still needed), **Pending** (needs Aaron's test Google account).
 
-Last updated: 2026-10-11.
+Last updated: 2026-10-12.
 
 | # | Topic | Status |
 |---|---|---|
 | 1 | Template copy with `drive.file` | Partly |
 | 2 | Bound script comes along and runs | Partly (script created bound to a sheet via clasp, runs; copy-by-app not tested) |
-| 3 | Permission prompt in testing mode | Partly (owner prompt seen; list not read; contributor path done) |
-| 4 | Identifying the submitter | Partly (personal accounts only; Workspace not tested) |
+| 3 | Permission prompt in testing mode | Done for personal accounts (5-permission list recorded; contributor path needs no prompt) |
+| 4 | Identifying the submitter | Done for personal accounts (form email checkbox, sidebar email via `userinfo.email`); Workspace not tested |
 | 5 | Email limits | Done |
 | 6 | Anthropic model and structured output | Done (structured output detail pending) |
-| 7 | Minimal OAuth scopes | Done for the engine's own functions (five scopes were enough) |
+| 7 | Minimal OAuth scopes | Done: five scopes ran every engine function, and `userinfo.email` was added as a sixth so the sidebar knows who is signed in |
 
 ---
 
@@ -39,7 +39,7 @@ Last updated: 2026-10-11.
 
 ## Spike 2: Bound script comes along and runs after Activate
 
-**Status.** Pending. Needs the test Google account and a template sheet with a bound script.
+**Status.** See the status table above and "Hands-on results" below. The original plan for this spike is kept here.
 
 **To test.**
 - Copy the template by the method from Spike 1.
@@ -51,7 +51,7 @@ Last updated: 2026-10-11.
 
 ## Spike 3: Permission prompt for an unverified app in testing mode
 
-**Status.** Pending. Needs the OAuth consent screen (Aaron's checklist).
+**Status.** See the status table above and "Hands-on results" below. The original plan for this spike is kept here.
 
 **To test and record.** What the prompt looks like, how many test users are allowed, and whether the Form-based contributor path avoids the prompt entirely, as the plan expects.
 
@@ -59,7 +59,7 @@ Last updated: 2026-10-11.
 
 ## Spike 4: Identifying who submitted an entry
 
-**Status.** Pending.
+**Status.** See the status table above and "Hands-on results" below. The original plan for this spike is kept here.
 
 **To test.** On a personal Gmail account and a Workspace account: does the Form's collected email reach the `onFormSubmit` event, and what does `Session.getActiveUser()` return? Fallback if either is unreliable: a required "Your name" question on the Form.
 

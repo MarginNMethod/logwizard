@@ -123,7 +123,7 @@ Numbered H2 checks. The test script above refers to them as H2-n.
 9. MailApp limits match Spike 5 (100 per day personal, 1500 Workspace) and the gmail.com or googlemail.com test for "personal" is right for the test account. `MailApp.sendEmail` works with only `script.send_mail`.
 10. Script property values stay under 9 KB: the `sent:<date>` key list is one property per day. Fine for 20 contributors; revisit if recipients grow.
 11. The simple trigger `onOpen` can read `_plan` and build the menu before the user has authorized the script. `SpreadsheetApp.getUi().alert` works from the menu and fails quietly (caught) from triggers.
-12. The final "Project OAuth Scopes" list equals the five scopes in `appsscript.json` and shows no restricted scope.
+12. The final "Project OAuth Scopes" list equals the six scopes in `appsscript.json` and shows no restricted scope.
 13. `insertSheet`, whole-column `setNumberFormat` and `setDataValidation` over the sheet's rows are fast enough (under about 30 seconds for three tabs) with `spreadsheets.currentonly`.
 14. If the owner deletes a generated form, Activate creates a new one and re-points the trigger (Setup shows the new link).
 15. Script lock from triggers: `LockService.getScriptLock().waitLock(10000)` works from the form-submit trigger, the hourly trigger and the sidebar call. Submit two forms at once and while an hourly send is running (add a few seconds of sleep in a test copy if needed): both rows are written once and nothing is lost.
