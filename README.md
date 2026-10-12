@@ -81,7 +81,11 @@ pnpm --filter @logwizard/apps-script build # bundles the Apps Script engine (off
 
 Requirements: Node.js and pnpm (the root `package.json` pins `pnpm@10.0.0`). The eval runner needs Node 22.15 or newer (`evals/README.md`).
 
-Screenshot placeholder: `docs/screenshots/demo-plan-preview.png` (not yet captured).
+Screenshots of the live demo (captured with Playwright on 2026-10-12):
+
+| Start | Plan review |
+|---|---|
+| ![Start the interview](docs/screenshots/demo-start.png) | ![Review your plan](docs/screenshots/demo-plan-preview.png) |
 
 ---
 
