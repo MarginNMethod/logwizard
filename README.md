@@ -54,7 +54,7 @@ Read this section before quoting any claim from this repository. Dates are 2026-
 - The planner has only run on plans recorded by Claude Code subagents. No live model call was made, by design.
 - The eval is small and not independent: 17 personas, one run each. 12 were used to tune the prompt, and 5 held-out personas were written and committed before the final run. All were written by the same author as the prompt (`evals/results-notes.v2.md`).
 - Accessibility (WCAG 2.1 AA) has not been audited.
-- The recorded video walkthrough and the sample sheet link do not exist yet (`docs/demo-script.md`).
+- A narrated video and a Google-side walkthrough (Activate, Form, reminder email) do not exist yet. The sample sheet link does not exist yet (`docs/demo-script.md`).
 - Microsoft: design only (`docs/MICROSOFT_ADAPTER.md`).
 - The measured before and after setup times for the case study (see the case study).
 
@@ -81,7 +81,11 @@ pnpm --filter @logwizard/apps-script build # bundles the Apps Script engine (off
 
 Requirements: Node.js and pnpm (the root `package.json` pins `pnpm@10.0.0`). The eval runner needs Node 22.15 or newer (`evals/README.md`).
 
-Screenshots of the live demo (captured with Playwright on 2026-10-12):
+A 30-second silent capture of Demo mode, from the interview to the approved plan (Playwright, 2026-10-12). It shows the web app only, not Google:
+
+![Demo mode walkthrough](docs/media/demo-mode.gif)
+
+Still images:
 
 | Start | Plan review |
 |---|---|

@@ -64,5 +64,5 @@ Ready to show, with two honest caveats that the documents now state up front:
 1. Done: "What I would do differently" rewritten concisely.
 2. Done: privacy contact set.
 3. Done: repository public.
-4. Record the 3-minute demo and add the link (a screen recording needs a person at the screen).
+4. Partly done: a silent 30-second GIF of Demo mode and four screenshots (Playwright). A narrated video, and a Google-side walkthrough, still need a person at the screen.
 5. Done on 2026-10-12: five held-out personas, prompt frozen, 5 of 5 passed. For stronger evidence, have someone else write personas and keys.

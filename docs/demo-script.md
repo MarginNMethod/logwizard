@@ -1,6 +1,6 @@
 # Demo script: 3-minute walkthrough (Demo mode)
 
-Status: script for recording. Not yet recorded. The timings below are a plan for pacing, not measurements.
+Status: script for recording. A silent 30-second capture of Demo mode exists at `docs/media/demo-mode.gif`. The narrated 3-minute version has not been recorded. The timings below are a plan for pacing, not measurements.
 
 **Placeholder notice.** The recorded Google walkthrough (Activate, Form, and reminder email) does **not exist yet**. The demo ends with a placeholder where that link will go. Do not describe the Google part as shown until it is recorded. The app marks both links as placeholders until they are published (`apps/web/lib/placeholders.ts`, `WALKTHROUGH_URL` and `SAMPLE_SHEET_URL` are both `null`).
 
