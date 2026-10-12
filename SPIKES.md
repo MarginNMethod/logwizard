@@ -157,3 +157,12 @@ Run in two personal Google accounts: an "owner" account and a second "contributo
 - **Fix.** Every data cell starting with `=`, `+`, `-` or `@` now gets a leading apostrophe, except a value that is exactly a list option. Reading strips it. 15 new tests, 67 in the Apps Script package.
 - **Re-test in real Google.** After `clasp push`, the same `=SUM(A1)` through the form was stored as text. The cell shows `=SUM(A1)` and the formula bar shows `'=SUM(A1)`. No visible apostrophe in the cell. Passed.
 - **Still open.** Real-Google behaviour for `+`, `-` and `@` starts, and the hourly reminder and weekly digest sends.
+
+**Permission screen (second H2 session, recorded from a screenshot the owner sent)**
+Google's first-run screen for the bound script listed exactly five permissions:
+1. View and manage spreadsheets that this application has been installed in.
+2. View and manage your forms in Google Drive.
+3. Send email as you.
+4. Allow this application to run when you are not present.
+5. Display and run third-party web content in prompts and sidebars inside Google applications.
+These match the five pinned scopes (`spreadsheets.currentonly`, `forms`, `send_mail`, `scriptapp`, `container.ui`). No Gmail-read, Drive-wide or contacts permission appeared. The "unverified app" wording was not captured.
