@@ -8,6 +8,12 @@ if (!owner) throw new Error("Set H2_OWNER_EMAIL to the address that should recei
 
 const plan = JSON.parse(readFileSync("../packages/plan-schema/test/fixtures/valid-example.json", "utf8"));
 plan.owner = { name: "Test Owner", email: owner };
+// Optional: H2_SEND_HOUR=0 makes reminders and the digest due at any hour, so a test need not wait for 08:00.
+if (process.env.H2_SEND_HOUR !== undefined) {
+  const hour = Number(process.env.H2_SEND_HOUR);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) throw new Error("H2_SEND_HOUR must be an integer 0 to 23.");
+  for (const r of plan.reminders) r.send_hour = hour;
+}
 // Keep the example contributor (example.com): nothing is ever sent to it, alerts go to the owner only.
 
 const json = JSON.stringify(plan);
