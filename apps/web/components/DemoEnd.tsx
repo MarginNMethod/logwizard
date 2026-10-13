@@ -1,6 +1,8 @@
 import type { RefObject } from "react";
 import Link from "next/link";
 import { SAMPLE_SHEET_URL, WALKTHROUGH_URL } from "@/lib/placeholders";
+import type { Plan } from "@logwizard/plan-schema";
+import { BuildSteps } from "./BuildSteps";
 import { button, cardClass } from "./styles";
 
 function PlaceholderLink({ href, label, note }: { href: string | null; label: string; note: string }) {
@@ -13,14 +15,15 @@ function PlaceholderLink({ href, label, note }: { href: string | null; label: st
   );
 }
 
-export function DemoEnd({ headingRef, systemName, onRestart }: { headingRef: RefObject<HTMLHeadingElement | null>; systemName: string; onRestart: () => void }) {
+export function DemoEnd({ headingRef, plan, onRestart }: { headingRef: RefObject<HTMLHeadingElement | null>; plan: Plan; onRestart: () => void }) {
   return (
     <section className={cardClass} aria-labelledby="end-h">
-      <h1 id="end-h" ref={headingRef} tabIndex={-1} className="text-2xl font-bold">Your plan for &quot;{systemName}&quot; is approved (Demo mode)</h1>
+      <h1 id="end-h" ref={headingRef} tabIndex={-1} className="text-2xl font-bold">Your plan for &quot;{plan.system_name}&quot; is approved (Demo mode)</h1>
       <p className="mt-3">
-        In Demo mode nothing is built in a Google account and no one signed in. In the full version, the next step builds the
-        spreadsheet, the entry form, and the reminders in your own Google account.
+        In Demo mode nothing is built by LogWizard and no one signed in, so nothing is built until you do these steps yourself.
+        The steps below build the spreadsheet, the entry form, and the reminders in your own Google account.
       </p>
+      <BuildSteps plan={plan} />
       <h2 className="mt-5 text-lg font-bold">See what the result looks like</h2>
       <ul className="mt-2 list-disc space-y-2 pl-6">
         <li>

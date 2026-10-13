@@ -17,6 +17,8 @@ export class FakeServices implements Services {
   mails: Mail[] = [];
   alerts: { title: string; message: string }[] = [];
   sidebars: { title: string; html: string }[] = [];
+  dialogs: { title: string; html: string }[] = [];
+  planTabHidden = false;
   menu: { name: string; items: (MenuItem | "separator")[] } | null = null;
   lockCalls = 0;
   /** True while the script lock is held. A second withLock while held fails like a real lock timeout. */
@@ -64,6 +66,10 @@ export class FakeServices implements Services {
   readPlanText() {
     const t = this.tabs.get("_plan");
     return t ? t.map((r) => r[0] ?? "").join("") || null : null;
+  }
+  writePlanChunks(chunks: string[]) {
+    this.tabs.set("_plan", chunks.map((c) => [c]));
+    this.planTabHidden = true;
   }
   setSpreadsheetTimeZone(tz: string) { this.tz = tz; }
   ensureLogTab(spec: LogTabSpec) {
@@ -161,6 +167,7 @@ export class FakeServices implements Services {
     }
   }
   showSidebar(title: string, html: string) { this.sidebars.push({ title, html }); }
+  showDialog(title: string, html: string) { this.dialogs.push({ title, html }); }
   alert(title: string, message: string) { this.alerts.push({ title, message }); }
   setMenu(name: string, items: (MenuItem | "separator")[]) { this.menu = { name, items }; }
 

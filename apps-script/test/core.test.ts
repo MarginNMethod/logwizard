@@ -202,11 +202,11 @@ describe("sidebar", () => {
 });
 
 describe("menu", () => {
-  it("is named from the plan and lists the five actions", () => {
+  it("is named from the plan and lists the actions, with Replace plan before Activate", () => {
     const svc = new FakeServices();
     buildMenu(svc);
     expect(svc.menu!.name).toBe("Employer Outreach Log");
-    expect(svc.menu!.items.filter((i) => i !== "separator").map((i) => (i as { label: string }).label)).toEqual(["Add entry", "Run routing now", "Send test reminder", "Activate", "Help"]);
+    expect(svc.menu!.items.filter((i) => i !== "separator").map((i) => (i as { label: string }).label)).toEqual(["Add entry", "Run routing now", "Send test reminder", "Replace plan", "Activate", "Help"]);
     const none = new FakeServices(null);
     buildMenu(none);
     expect(none.menu!.name).toBe("LogWizard");

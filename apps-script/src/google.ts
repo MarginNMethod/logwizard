@@ -153,6 +153,12 @@ export function createGoogleServices(): Services {
       const parts = sh.getRange(1, 1, sh.getLastRow(), 1).getValues().map((r) => String(r[0] ?? "")).filter((s) => s !== "");
       return parts.length ? parts.join("") : null;
     },
+    writePlanChunks(chunks) {
+      const sh = ss().getSheetByName(PLAN_TAB) ?? ss().insertSheet(PLAN_TAB);
+      sh.clear();
+      sh.getRange(1, 1, chunks.length, 1).setNumberFormat("@").setValues(chunks.map((c) => [c]));
+      sh.hideSheet();
+    },
     setSpreadsheetTimeZone(tz) {
       ss().setSpreadsheetTimeZone(tz);
     },
@@ -299,6 +305,9 @@ export function createGoogleServices(): Services {
     },
     showSidebar(title, html) {
       SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutput(html).setTitle(title));
+    },
+    showDialog(title, html) {
+      SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(560).setHeight(420), title);
     },
     alert(title, message) {
       SpreadsheetApp.getUi().alert(title, message, SpreadsheetApp.getUi().ButtonSet.OK);

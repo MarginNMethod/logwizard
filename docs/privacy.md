@@ -9,6 +9,7 @@ LogWizard helps a small team set up an interaction log in their own Google accou
 ## The short version
 
 - **We do not keep your plan, your answers, your emails, or your spreadsheet.** Your log lives in your own Google account.
+- **Your plan reaches your sheet because you copy it there yourself.** You copy it from the page and paste it into your own copy of the sheet. The server still stores nothing.
 - **The only data kept on our server** is anonymous timing and count information, plus request counters for rate limiting.
 - **That data is meant to be deleted on a 90-day schedule.** The deletion job depends on a database feature that may not be available on a free project, so the project owner also clears old rows by hand if needed.
 - **An AI key you paste is kept only in your browser's memory.** It passes through our server once per request to reach the AI provider, and is never saved or logged.

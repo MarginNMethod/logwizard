@@ -28,7 +28,9 @@ pnpm --filter @logwizard/apps-script build       # dist/Code.js + dist/appsscrip
 
 Entry points (top-level in `dist/Code.js`):
 
-- `onOpen()`: builds the menu, named from the plan `system_name` ("LogWizard" if no valid plan). Items: Add entry, Run routing now, Send test reminder, Activate, Help.
+- `onOpen()`: builds the menu, named from the plan `system_name` ("LogWizard" if no valid plan). With a plan, items: Add entry, Run routing now, Send test reminder, Replace plan, Activate, Help. With no valid plan (no `_plan` tab, or it is empty or invalid), only Paste your plan and Help.
+- `showPastePlanDialog()`: the Paste your plan and Replace plan menu items. Opens a modal dialog with instructions, a large text box and a Save button.
+- `savePlanFromDialog(text)`: called by the dialog via `google.script.run`. Never throws. Accepts the bare plan, the planner reply `{plan, ...}` or the downloaded plan file. Validates with the same `validatePlan` as Activate and writes nothing on failure. On success it sets `owner.email` to the person pasting (when Google reports an address), writes the plan to the hidden `_plan` tab in chunks, and logs one Activity line. Returns `{ok, message, errors?}`.
 - `activate()`: reads `_plan`, re-validates with `validatePlan` and refuses with a plain message on failure. Otherwise sets the spreadsheet time zone, creates Setup and Activity, builds one tab per log (headers, frozen row, plain-text format, data validation), creates or reuses one Google Form per base log, replaces its own triggers, writes a confirmation to Setup.
 - `showAddEntrySidebar()`: owner sidebar generated from the fields.
 - `submitEntry(payload)`: called by the sidebar via `google.script.run`. Returns `{ok, message}` or `{ok:false, errors}`.
@@ -38,7 +40,7 @@ Entry points (top-level in `dist/Code.js`):
 - `hourlyTick()`: hourly trigger. Due reminders and the weekly digest, merged into one email per person per day.
 - `showHelp()`: plain-language help dialog.
 
-Core functions (`src/core.ts`, unit-tested): `loadPlan`, `activate`, `addEntry`, `handleFormSubmission`, `submitEntryFromSidebar`, `runRoutingNow`, `hourlyTick`, `sendTestReminder`, `deliver` (daily cap, sent keys, 80% warning), `buildMenu`, `showSidebar`, `guarded` (any failure becomes a plain Activity line).
+Core functions (`src/core.ts`, unit-tested): `loadPlan`, `activate`, `addEntry`, `handleFormSubmission`, `submitEntryFromSidebar`, `runRoutingNow`, `hourlyTick`, `sendTestReminder`, `savePlanFromPaste`, `showPasteDialog`, `deliver` (daily cap, sent keys, 80% warning), `buildMenu`, `showSidebar`, `guarded` (any failure becomes a plain Activity line).
 
 ## Behaviour rules
 
@@ -107,6 +109,7 @@ Setup: new spreadsheet in the test account. Add a tab named `_plan` (hide it lat
 10. Set a row's Follow-up date to tomorrow, wait for the next hour tick (or run `hourlyTick` from the editor after 08:00 local). Expected: one email "your summary for <date>". Run `hourlyTick` again: no second email. Script properties show `sent:<date>` and `sendCount`. (H2-11, 12)
 11. In the editor, set the `sendCount` property to `{"date":"<today>","count":80}` and run `hourlyTick` after creating a due item. Expected: the email goes and Activity gets "80% or more". Set count to 100 on a gmail.com owner: no email, Activity says the limit was reached.
 12. Break `_plan` (change `time_zone` to `Mars/Olympus`) and run Activate. Expected: a message naming time_zone, nothing changed. Restore it.
+13. Copy link and paste flow (C1). Open `https://docs.google.com/spreadsheets/d/<template id>/copy` signed in as a second Google account and press Make a copy (Google says the attached Apps Script is copied too). Reload the copy. Expected: a menu named "LogWizard" with only Paste your plan and Help, and no `_plan` tab content. Menu, Paste your plan, approve the permission screen. Paste the plan JSON from the web app's Copy your plan button, press Save. Expected: green "Plan saved..." that names your own email as the owner. Reload. Expected: the menu is now named from the plan and has Replace plan before Activate. The `_plan` tab is hidden. Activity has one "Plan saved" line. Then: paste "hello" and Save, expected a red plain message and no change; paste a plan with `time_zone` set to `Mars/Olympus`, expected a red message naming time_zone and the old plan still in place; Replace plan with a valid plan, expected it saved; Activate, expected the normal build.
 
 ## Assumptions to confirm at H2
 

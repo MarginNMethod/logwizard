@@ -19,7 +19,7 @@ import {
   zonedParts,
 } from "@logwizard/engine-logic";
 import type { Entry, EntryValue, Plan, PlanField, PlanLog, RowsByLog } from "@logwizard/engine-logic";
-import { validatePlan } from "@logwizard/plan-schema";
+import { MAX_PLAN_BYTES, validatePlan } from "@logwizard/plan-schema";
 import { alertEmail, buildOutgoing, testEmail } from "./mail.js";
 import type { Outgoing } from "./mail.js";
 import { buildSidebarHtml } from "./sidebar.js";
@@ -807,13 +807,96 @@ export const MENU_ITEMS = [
   { label: "Run routing now", handler: "runRoutingNow" },
   { label: "Send test reminder", handler: "sendTestReminder" },
   "separator",
+  { label: "Replace plan", handler: "showPastePlanDialog" },
   { label: "Activate", handler: "activate" },
+  { label: "Help", handler: "showHelp" },
+] as const;
+
+/** Menu for a sheet with no valid plan yet. */
+export const PASTE_ONLY_MENU = [
+  { label: "Paste your plan", handler: "showPastePlanDialog" },
   { label: "Help", handler: "showHelp" },
 ] as const;
 
 export function buildMenu(svc: Services): void {
   const loaded = loadPlan(svc);
-  svc.setMenu(loaded.ok ? loaded.plan.system_name : "LogWizard", [...MENU_ITEMS]);
+  if (loaded.ok) svc.setMenu(loaded.plan.system_name, [...MENU_ITEMS]);
+  else svc.setMenu("LogWizard", [...PASTE_ONLY_MENU]);
+}
+
+// ---------- paste your plan ----------
+
+/** Pretty printed plans carry extra spaces, so the pasted text may be larger than the plan itself. */
+const MAX_PASTE_CHARS = MAX_PLAN_BYTES * 3;
+/** A cell holds 50,000 characters. Stay under it. */
+const PLAN_CHUNK = 40000;
+
+export interface PasteResult {
+  ok: boolean;
+  message: string;
+  errors?: string[];
+}
+
+const pasteFail = (message: string, errors?: string[]): PasteResult => (errors ? { ok: false, message, errors } : { ok: false, message });
+
+/**
+ * Check a plan the owner pasted and, only if it is valid, store it in the hidden _plan tab.
+ * Accepts the bare plan, the planner reply ({plan, ...}) or the downloaded file (a bare plan). Never throws on bad input.
+ */
+export function savePlanFromPaste(svc: Services, text: string): PasteResult {
+  if (typeof text === "string" && text.length > MAX_PASTE_CHARS) return pasteFail("That text is too large to be a plan. Copy the plan again from the LogWizard page.");
+  if (typeof text !== "string" || !text.trim()) return pasteFail("Nothing was pasted. Copy your plan from the LogWizard page, then paste it here.");
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return pasteFail("That does not look like a plan. Go back to the LogWizard page, use Copy your plan, and paste everything.");
+  }
+  if (data && typeof data === "object" && !Array.isArray(data) && "plan" in data) {
+    const inner = (data as { plan: unknown }).plan;
+    if (!inner || typeof inner !== "object") return pasteFail("That reply has no plan in it. Use the approved plan from the LogWizard page.");
+    data = inner;
+  }
+  const r = validatePlan(data);
+  if (!r.ok) {
+    const errors = r.errors.slice(0, 5).map((e) => e.message);
+    return pasteFail("The plan has problems, so nothing was saved.", errors);
+  }
+  const plan = r.plan;
+  const user = svc.activeUserEmail().trim();
+  if (user) plan.owner.email = user;
+  const json = JSON.stringify(plan);
+  const chunks: string[] = [];
+  for (let i = 0; i < json.length; i += PLAN_CHUNK) chunks.push(json.slice(i, i + PLAN_CHUNK));
+  svc.withLock(() => svc.writePlanChunks(chunks));
+  logActivity(svc, "info", `Plan saved for "${plan.system_name}" from the Paste your plan dialog.`);
+  const who = user ? ` Reminders and alerts will go to ${user}, because you own this sheet.` : "";
+  return { ok: true, message: `Plan saved.${who} Now reload the sheet, then use the ${plan.system_name} menu > Activate.` };
+}
+
+const PASTE_DIALOG_HTML = `<!DOCTYPE html><html><head><base target="_top"><style>
+body{font-family:Arial,sans-serif;font-size:13px;margin:12px}
+textarea{width:100%;box-sizing:border-box;height:260px;font-family:monospace;font-size:12px}
+button{padding:6px 14px;margin-top:8px}#msg{margin-top:10px;white-space:pre-wrap}.err{color:#b00020}.ok{color:#146c2e}
+</style></head><body>
+<p><label for="plan">On the LogWizard page, use "Copy your plan". Then paste it here and press Save.</label></p>
+<textarea id="plan" spellcheck="false"></textarea>
+<button id="save">Save</button><div id="msg" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  function show(t,c){var m=document.getElementById('msg');m.className=c;m.textContent=t;}
+  document.getElementById('save').onclick=function(){
+    var btn=this;btn.disabled=true;show('Checking...','');
+    google.script.run.withSuccessHandler(function(r){btn.disabled=false;
+      if(r&&r.ok){show(r.message,'ok');}else{show([(r&&r.message)||'Something went wrong.'].concat((r&&r.errors)||[]).join('\\n'),'err');}
+    }).withFailureHandler(function(e){btn.disabled=false;show('Could not save: '+(e&&e.message?e.message:e),'err');})
+    .savePlanFromDialog(document.getElementById('plan').value);
+  };
+})();
+</script></body></html>`;
+
+export function showPasteDialog(svc: Services): void {
+  svc.showDialog("Paste your plan", PASTE_DIALOG_HTML);
 }
 
 export function showSidebar(svc: Services): void {
@@ -827,6 +910,7 @@ export const HELP_TEXT = [
   "Contributors add entries with the Google Form linked on the Setup tab.",
   "Run routing now: copies entries to the other logs that match the rules. It never makes duplicates.",
   "Send test reminder: emails you what is due today, ignoring the send hour.",
+  "Paste your plan or Replace plan: opens a box where you paste the plan you copied from the LogWizard page.",
   "Activate: run once after the plan is in place. It builds the tabs and form and sets up the hourly check.",
   "Problems are written in plain language on the Activity tab.",
 ].join("\n\n");

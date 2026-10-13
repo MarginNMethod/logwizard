@@ -73,6 +73,8 @@ export interface Services {
   // Spreadsheet
   /** Text of the hidden _plan tab (all non-empty cells in column A joined), or null when the tab is missing or empty. */
   readPlanText(): string | null;
+  /** Replace the hidden _plan tab with these chunks, one per row in column A (the format readPlanText reads). Keeps the tab hidden. */
+  writePlanChunks(chunks: string[]): void;
   setSpreadsheetTimeZone(timeZone: string): void;
   ensureLogTab(spec: LogTabSpec): LogTabResult;
   /** Create the Setup or Activity tab if missing. Headers are written only to an empty tab. */
@@ -113,6 +115,8 @@ export interface Services {
   remainingQuota(): number;
   sendMail(to: string, subject: string, body: string): void;
   showSidebar(title: string, html: string): void;
+  /** Modal dialog (used for Paste your plan). */
+  showDialog(title: string, html: string): void;
   alert(title: string, message: string): void;
   setMenu(name: string, items: (MenuItem | "separator")[]): void;
 }

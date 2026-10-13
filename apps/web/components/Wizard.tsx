@@ -247,7 +247,7 @@ export function Wizard() {
         />
       )}
 
-      {stage === "done" && result && <DemoEnd headingRef={headingRef} systemName={result.plan.system_name} onRestart={() => { setStage("setup"); setResult(null); setError(""); }} />}
+      {stage === "done" && result && <DemoEnd headingRef={headingRef} plan={result.plan} onRestart={() => { setStage("setup"); setResult(null); setError(""); }} />}
     </div>
   );
 }
