@@ -177,3 +177,10 @@ These match the five pinned scopes (`spreadsheets.currentonly`, `forms`, `send_m
 
 **Sidebar identity re-test (second H2 session): passed**
 After adding the `userinfo.email` scope and re-pushing, a sidebar entry saved by the owner in a private window showed `Entered by` = the owner's email (not `unknown`), and no new-entry alert email arrived for it. The collaborator case (a second account as editor) was not tested in real Google.
+
+**Spike 1 hands-on (2026-10-12)**
+Setup: a template sheet with the bundled engine bound to it, owned by the owner account and shared "anyone with the link can view". A second Google account played the visitor.
+- **(a) `files.copy` with only `drive.file`: fails.** Token from Google's OAuth Playground with scope `drive.file` only, signed in as the visitor. `POST drive/v3/files/<template>/copy` returned **404 File not found**, even though the sheet opens publicly without sign-in. `drive.file` cannot see a file the app was never given. Option (a) is ruled out.
+- **(c) "Make a copy" link: works, and the engine comes along.** Opening `/spreadsheets/d/<template>/copy` as the visitor showed "The attached Apps Script file and functionality will also be copied". After Make a copy, the visitor's copy showed the engine's `LogWizard` menu, so the bound script was copied and its `onOpen` ran.
+- **Consequence of (c).** The visitor made the copy, not the app, so the app's `drive.file` token cannot write the plan into it. The plan must reach `_plan` another way: the user pastes it, or the engine fetches it.
+- **(b) Google Picker: not yet tested.** If the user picks the template in the Picker, `drive.file` access is granted for that file, then `files.copy` should work and the copy is app-created, so the app can also write `_plan`. Needs a free Google Cloud project with an OAuth client and a Picker API key.
