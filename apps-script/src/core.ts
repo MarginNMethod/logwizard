@@ -967,15 +967,15 @@ button{padding:6px 14px;margin-top:8px;margin-right:6px}button:disabled{opacity:
 (function(){
   var area=document.getElementById('plan'), check=document.getElementById('check'), save=document.getElementById('save'), preview=document.getElementById('preview');
   function show(t,c){var m=document.getElementById('msg');m.className=c;m.textContent=t;}
-  function problems(r){return [(r&&r.message)||'Something went wrong.'].concat((r&&r.errors)||[]).join('\n');}
+  function problems(r){return [(r&&r.message)||'Something went wrong.'].concat((r&&r.errors)||[]).join('\\n');}
   function reset(){preview.style.display='none';preview.textContent='';save.disabled=true;}
   area.oninput=function(){reset();show('Plan changed. Press Check plan again.','');};
   check.onclick=function(){
     check.disabled=true;show('Checking...','');
     google.script.run.withSuccessHandler(function(r){check.disabled=false;
       if(r&&r.ok){
-        var who=r.recipients&&r.recipients.length?'This sheet will email these people from your account:\n'+r.recipients.join('\n'):'No one else will be emailed from this sheet.';
-        preview.textContent=r.summary+'\n\n'+who+(r.replacing?'\n\nThis replaces the plan already saved in this sheet.':'');
+        var who=r.recipients&&r.recipients.length?'This sheet will email these people from your account:\\n'+r.recipients.join('\\n'):'No one else will be emailed from this sheet.';
+        preview.textContent=r.summary+'\\n\\n'+who+(r.replacing?'\\n\\nThis replaces the plan already saved in this sheet.':'');
         preview.style.display='block';save.disabled=false;
         show('Read the list above. Press Save this plan only if you trust this plan.','ok');
       }else{reset();show(problems(r),'err');}
