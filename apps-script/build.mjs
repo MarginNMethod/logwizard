@@ -5,7 +5,7 @@ import { copyFileSync, mkdirSync, rmSync } from "node:fs";
 // Functions Apps Script must be able to call by name (menus, triggers, google.script.run).
 export const ENTRY_POINTS = [
   "onOpen", "activate", "showAddEntrySidebar", "submitEntry", "onFormSubmit",
-  "runRoutingNow", "sendTestReminder", "hourlyTick", "showHelp", "showPastePlanDialog", "savePlanFromDialog",
+  "runRoutingNow", "sendTestReminder", "hourlyTick", "showHelp", "showPastePlanDialog", "savePlanFromDialog", "previewPlanFromDialog",
 ];
 
 rmSync("dist", { recursive: true, force: true });

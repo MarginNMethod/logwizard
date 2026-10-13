@@ -155,9 +155,15 @@ export function createGoogleServices(): Services {
     },
     writePlanChunks(chunks) {
       const sh = ss().getSheetByName(PLAN_TAB) ?? ss().insertSheet(PLAN_TAB);
-      sh.clear();
+      // Write the new rows first, then clear what is left over, so a failed write never leaves the sheet empty.
       sh.getRange(1, 1, chunks.length, 1).setNumberFormat("@").setValues(chunks.map((c) => [c]));
-      sh.hideSheet();
+      const extra = sh.getMaxRows() - chunks.length;
+      if (extra > 0) sh.getRange(chunks.length + 1, 1, extra, 1).clearContent();
+      try {
+        sh.hideSheet();
+      } catch {
+        // Hiding fails if the _plan tab is the only visible tab. The plan is already written, so this is not an error.
+      }
     },
     setSpreadsheetTimeZone(tz) {
       ss().setSpreadsheetTimeZone(tz);

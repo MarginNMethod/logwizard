@@ -19,7 +19,7 @@ import {
   zonedParts,
 } from "@logwizard/engine-logic";
 import type { Entry, EntryValue, Plan, PlanField, PlanLog, RowsByLog } from "@logwizard/engine-logic";
-import { MAX_PLAN_BYTES, validatePlan } from "@logwizard/plan-schema";
+import { MAX_PLAN_BYTES, plainEnglishSummary, validatePlan } from "@logwizard/plan-schema";
 import { alertEmail, buildOutgoing, testEmail } from "./mail.js";
 import type { Outgoing } from "./mail.js";
 import { buildSidebarHtml } from "./sidebar.js";
@@ -837,20 +837,62 @@ export interface PasteResult {
   errors?: string[];
 }
 
-const pasteFail = (message: string, errors?: string[]): PasteResult => (errors ? { ok: false, message, errors } : { ok: false, message });
+type PasteFailure = { ok: false; message: string; errors?: string[] };
+const pasteFail = (message: string, errors?: string[]): PasteFailure => (errors ? { ok: false, message, errors } : { ok: false, message });
+
+/** Characters that a spreadsheet may read as a formula or text prefix when they start a cell. */
+const RISKY_START = /[=+\-@'\t\r]/;
+const sameEmail = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Remove the invisible and non-standard spaces a pasted plan can pick up from other apps. */
+function cleanPasted(text: string): string {
+  return text.replace(/^\uFEFF/, "").replace(/[\u00A0\u2007\u202F]/g, " ").trim();
+}
+
+/** Split the JSON so no chunk starts with a character a spreadsheet could read as a formula. Concatenating the chunks gives the same text. */
+export function chunkPlan(json: string): string[] {
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < json.length) {
+    let end = Math.min(i + PLAN_CHUNK, json.length);
+    let k = end;
+    while (k < json.length && k > i + 1 && RISKY_START.test(json[k]!)) k--;
+    if (k > i) end = k;
+    chunks.push(json.slice(i, end));
+    i = end;
+  }
+  return chunks;
+}
 
 /**
- * Check a plan the owner pasted and, only if it is valid, store it in the hidden _plan tab.
- * Accepts the bare plan, the planner reply ({plan, ...}) or the downloaded file (a bare plan). Never throws on bad input.
+ * The owner is the person who signed in and pasted the plan, not the address the wizard was given.
+ * Notify targets that named the old owner become "owner", and the new owner is not also a contributor.
  */
-export function savePlanFromPaste(svc: Services, text: string): PasteResult {
+function applyOwner(plan: Plan, user: string): void {
+  const old = plan.owner.email;
+  if (sameEmail(old, user)) return;
+  plan.owner.email = user;
+  // Anyone who is now the owner is no longer a contributor, so an address that named either person becomes "owner".
+  const becomesOwner = (t: string) => sameEmail(t, old) || sameEmail(t, user);
+  for (const x of [...plan.reminders, ...plan.alerts] as { notify: string[] }[]) {
+    x.notify = x.notify.map((t) => (becomesOwner(t) ? "owner" : t));
+  }
+  plan.contributors = plan.contributors.filter((c) => !sameEmail(c.email, user));
+}
+
+/** Everything a paste must pass before it can be saved. Writes nothing. */
+type Prepared = { ok: true; plan: Plan; replacing: boolean } | { ok: false; message: string; errors?: string[] };
+
+function preparePlan(svc: Services, text: string): Prepared {
   if (typeof text === "string" && text.length > MAX_PASTE_CHARS) return pasteFail("That text is too large to be a plan. Copy the plan again from the LogWizard page.");
-  if (typeof text !== "string" || !text.trim()) return pasteFail("Nothing was pasted. Copy your plan from the LogWizard page, then paste it here.");
+  const cleaned = typeof text === "string" ? cleanPasted(text) : "";
+  if (!cleaned) return pasteFail("Nothing was pasted. Copy your plan from the LogWizard page, then paste it here.");
   let data: unknown;
   try {
-    data = JSON.parse(text);
+    data = JSON.parse(cleaned);
   } catch {
-    return pasteFail("That does not look like a plan. Go back to the LogWizard page, use Copy your plan, and paste everything.");
+    const curly = /[\u201C\u201D\u2018\u2019]/.test(cleaned);
+    return pasteFail(curly ? "That does not look like a plan. Another app changed the quote marks. Copy the plan again from the LogWizard page." : "That does not look like a plan. Go back to the LogWizard page, use Copy your plan, and paste everything.");
   }
   if (data && typeof data === "object" && !Array.isArray(data) && "plan" in data) {
     const inner = (data as { plan: unknown }).plan;
@@ -858,39 +900,94 @@ export function savePlanFromPaste(svc: Services, text: string): PasteResult {
     data = inner;
   }
   const r = validatePlan(data);
-  if (!r.ok) {
-    const errors = r.errors.slice(0, 5).map((e) => e.message);
-    return pasteFail("The plan has problems, so nothing was saved.", errors);
+  if (!r.ok) return pasteFail("The plan has problems, so nothing was saved.", r.errors.slice(0, 5).map((e) => e.message));
+  const user = svc.activeUserEmail().trim();
+  const existing = loadPlan(svc);
+  // Only the owner of a working plan may replace it. Editors can open the sheet, so they must not take over the owner's alerts.
+  if (existing.ok && !(user && sameEmail(user, existing.plan.owner.email))) {
+    return pasteFail(`Only the owner (${existing.plan.owner.email}) can replace this plan. Sign in as the owner, or ask them to paste it.`);
   }
   const plan = r.plan;
+  if (user) applyOwner(plan, user);
+  // The owner change can break cross-field rules (for example a notify address), so the final plan is checked again.
+  const again = validatePlan(plan);
+  if (!again.ok) return pasteFail("The plan has problems once you are set as the owner, so nothing was saved.", again.errors.slice(0, 5).map((e) => e.message));
+  return { ok: true, plan: again.plan, replacing: existing.ok };
+}
+
+export interface PastePreview extends PasteResult {
+  summary?: string;
+  recipients?: string[];
+  replacing?: boolean;
+}
+
+/** Step 1 of saving: show what the plan does and who will receive its emails. Writes nothing. */
+export function previewPlanFromPaste(svc: Services, text: string): PastePreview {
+  const p = preparePlan(svc, text);
+  if (!p.ok) return p;
+  const recipients = [...new Set(p.plan.contributors.map((c) => c.email.toLowerCase()))];
+  return { ok: true, message: "Check this plan before you save it.", summary: plainEnglishSummary(p.plan), recipients, replacing: p.replacing };
+}
+
+/**
+ * Step 2 of saving: store the plan in the hidden _plan tab. Called only after the owner has seen the preview.
+ * Never throws on bad input. A busy sheet says so and asks for another try.
+ */
+export function savePlanFromPaste(svc: Services, text: string): PasteResult {
+  const p = preparePlan(svc, text);
+  if (!p.ok) return p;
+  const plan = p.plan;
   const user = svc.activeUserEmail().trim();
-  if (user) plan.owner.email = user;
-  const json = JSON.stringify(plan);
-  const chunks: string[] = [];
-  for (let i = 0; i < json.length; i += PLAN_CHUNK) chunks.push(json.slice(i, i + PLAN_CHUNK));
-  svc.withLock(() => svc.writePlanChunks(chunks));
-  logActivity(svc, "info", `Plan saved for "${plan.system_name}" from the Paste your plan dialog.`);
-  const who = user ? ` Reminders and alerts will go to ${user}, because you own this sheet.` : "";
-  return { ok: true, message: `Plan saved.${who} Now reload the sheet, then use the ${plan.system_name} menu > Activate.` };
+  const chunks = chunkPlan(JSON.stringify(plan));
+  try {
+    locked(svc, () => svc.writePlanChunks(chunks));
+  } catch (e) {
+    if (isBusy(e)) return pasteFail("The sheet is busy with another change. Press Save this plan again in a minute.");
+    throw e;
+  }
+  logActivity(svc, "info", `Plan ${p.replacing ? "replaced" : "saved"} for "${plan.system_name}" by ${user || "an unknown user"} from the Paste your plan dialog.`);
+  const who = user ? ` Reminders and alerts will go to ${user}, because you pasted this plan.` : "";
+  const active = svc.getProp("activatedAt") ? " Your sheet is already active: run Activate now. Until you do, forms and reminders use the new plan with the old tabs." : "";
+  return { ok: true, message: `Plan saved.${who}${active} Now reload the sheet, then use the ${plan.system_name} menu > Activate.` };
 }
 
 const PASTE_DIALOG_HTML = `<!DOCTYPE html><html><head><base target="_top"><style>
 body{font-family:Arial,sans-serif;font-size:13px;margin:12px}
-textarea{width:100%;box-sizing:border-box;height:260px;font-family:monospace;font-size:12px}
-button{padding:6px 14px;margin-top:8px}#msg{margin-top:10px;white-space:pre-wrap}.err{color:#b00020}.ok{color:#146c2e}
+textarea{width:100%;box-sizing:border-box;height:200px;font-family:monospace;font-size:12px}
+button{padding:6px 14px;margin-top:8px;margin-right:6px}button:disabled{opacity:.5}
+#preview{display:none;white-space:pre-wrap;border:1px solid #888;padding:8px;margin-top:10px;max-height:220px;overflow:auto;font-size:12px}
+#msg{margin-top:10px;white-space:pre-wrap}.err{color:#b00020}.ok{color:#146c2e}
 </style></head><body>
-<p><label for="plan">On the LogWizard page, use "Copy your plan". Then paste it here and press Save.</label></p>
+<p><label for="plan">On the LogWizard page, use "Copy your plan". Paste it here, press Check plan, read who will be emailed, then press Save this plan.</label></p>
 <textarea id="plan" spellcheck="false"></textarea>
-<button id="save">Save</button><div id="msg" role="status" aria-live="polite"></div>
+<div><button id="check">Check plan</button><button id="save" disabled>Save this plan</button></div>
+<div id="preview" role="region" aria-label="Plan check"></div>
+<div id="msg" role="status" aria-live="polite"></div>
 <script>
 (function(){
+  var area=document.getElementById('plan'), check=document.getElementById('check'), save=document.getElementById('save'), preview=document.getElementById('preview');
   function show(t,c){var m=document.getElementById('msg');m.className=c;m.textContent=t;}
-  document.getElementById('save').onclick=function(){
-    var btn=this;btn.disabled=true;show('Checking...','');
-    google.script.run.withSuccessHandler(function(r){btn.disabled=false;
-      if(r&&r.ok){show(r.message,'ok');}else{show([(r&&r.message)||'Something went wrong.'].concat((r&&r.errors)||[]).join('\\n'),'err');}
-    }).withFailureHandler(function(e){btn.disabled=false;show('Could not save: '+(e&&e.message?e.message:e),'err');})
-    .savePlanFromDialog(document.getElementById('plan').value);
+  function problems(r){return [(r&&r.message)||'Something went wrong.'].concat((r&&r.errors)||[]).join('\n');}
+  function reset(){preview.style.display='none';preview.textContent='';save.disabled=true;}
+  area.oninput=function(){reset();show('Plan changed. Press Check plan again.','');};
+  check.onclick=function(){
+    check.disabled=true;show('Checking...','');
+    google.script.run.withSuccessHandler(function(r){check.disabled=false;
+      if(r&&r.ok){
+        var who=r.recipients&&r.recipients.length?'This sheet will email these people from your account:\n'+r.recipients.join('\n'):'No one else will be emailed from this sheet.';
+        preview.textContent=r.summary+'\n\n'+who+(r.replacing?'\n\nThis replaces the plan already saved in this sheet.':'');
+        preview.style.display='block';save.disabled=false;
+        show('Read the list above. Press Save this plan only if you trust this plan.','ok');
+      }else{reset();show(problems(r),'err');}
+    }).withFailureHandler(function(e){check.disabled=false;show('Could not check: '+(e&&e.message?e.message:e),'err');})
+    .previewPlanFromDialog(area.value);
+  };
+  save.onclick=function(){
+    save.disabled=true;show('Saving...','');
+    google.script.run.withSuccessHandler(function(r){
+      if(r&&r.ok){show(r.message,'ok');}else{save.disabled=false;show(problems(r),'err');}
+    }).withFailureHandler(function(e){save.disabled=false;show('Could not save: '+(e&&e.message?e.message:e),'err');})
+    .savePlanFromDialog(area.value);
   };
 })();
 </script></body></html>`;

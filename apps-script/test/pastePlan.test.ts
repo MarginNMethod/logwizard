@@ -96,8 +96,9 @@ describe("savePlanFromPaste", () => {
     expect(svc.activity()[0]![1]).toBe("info");
   });
 
-  it("replaces an existing plan", () => {
+  it("replaces an existing plan when the signed-in user is its owner", () => {
     const svc = new FakeServices(makePlan());
+    svc.user = makePlan().owner.email;
     const next = { ...makePlan(), system_name: "Second System" };
     expect(savePlanFromPaste(svc, JSON.stringify(next)).ok).toBe(true);
     const loaded = loadPlan(svc);

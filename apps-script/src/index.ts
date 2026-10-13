@@ -1,6 +1,6 @@
 // Entry points. build.mjs exposes each export below as a top-level function so Apps Script can call it
 // from menus, triggers, and google.script.run.
-import { activate as activateCore, buildMenu, guarded, handleFormSubmission, hourlyTick as hourlyCore, HELP_TEXT, savePlanFromPaste, showPasteDialog, runRoutingNow as routingCore, sendTestReminder as testCore, showSidebar, submitEntryFromSidebar } from "./core.js";
+import { activate as activateCore, buildMenu, guarded, handleFormSubmission, hourlyTick as hourlyCore, HELP_TEXT, previewPlanFromPaste, savePlanFromPaste, showPasteDialog, type PastePreview, runRoutingNow as routingCore, sendTestReminder as testCore, showSidebar, submitEntryFromSidebar } from "./core.js";
 import { createGoogleServices, parseFormEvent } from "./google.js";
 
 export function onOpen(): void {
@@ -24,6 +24,13 @@ export function showPastePlanDialog(): void {
 }
 
 /** Called from the paste dialog through google.script.run. Never throws: the dialog shows the returned message. */
+export function previewPlanFromDialog(text: string): PastePreview {
+  const svc = createGoogleServices();
+  const r = guarded(svc, "Check plan", () => previewPlanFromPaste(svc, text), false);
+  return r ?? { ok: false, message: "Something went wrong. See the Activity tab." };
+}
+
+/** Called from the paste dialog through google.script.run, after the owner has seen the preview. Never throws. */
 export function savePlanFromDialog(text: string): { ok: boolean; message: string; errors?: string[] } {
   const svc = createGoogleServices();
   const r = guarded(svc, "Paste your plan", () => savePlanFromPaste(svc, text), false);

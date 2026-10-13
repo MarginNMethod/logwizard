@@ -8,7 +8,7 @@ const problems = [];
 if (/^\s*import[\s{*"']/m.test(code)) problems.push("dist/Code.js has an import statement");
 if (/^\s*export[\s{*]/m.test(code)) problems.push("dist/Code.js has an export statement");
 if (/\brequire\s*\(/.test(code)) problems.push("dist/Code.js calls require()");
-for (const n of ["onOpen", "activate", "showAddEntrySidebar", "submitEntry", "onFormSubmit", "runRoutingNow", "sendTestReminder", "hourlyTick", "showHelp", "showPastePlanDialog", "savePlanFromDialog"]) {
+for (const n of ["onOpen", "activate", "showAddEntrySidebar", "submitEntry", "onFormSubmit", "runRoutingNow", "sendTestReminder", "hourlyTick", "showHelp", "showPastePlanDialog", "savePlanFromDialog", "previewPlanFromDialog"]) {
   if (!new RegExp(`^function ${n}\\(`, "m").test(code)) problems.push(`missing top-level function ${n}`);
 }
 const ALLOWED = new Set([

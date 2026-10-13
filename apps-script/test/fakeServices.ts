@@ -67,6 +67,10 @@ export class FakeServices implements Services {
     const t = this.tabs.get("_plan");
     return t ? t.map((r) => r[0] ?? "").join("") || null : null;
   }
+  /** The chunks as they sit in the hidden _plan tab, one per row. */
+  get planChunks(): string[] {
+    return (this.tabs.get("_plan") ?? []).map((r) => r[0] ?? "");
+  }
   writePlanChunks(chunks: string[]) {
     this.tabs.set("_plan", chunks.map((c) => [c]));
     this.planTabHidden = true;

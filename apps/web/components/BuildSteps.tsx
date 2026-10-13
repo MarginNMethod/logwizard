@@ -12,6 +12,15 @@ export function BuildSteps({ plan }: { plan: Plan }) {
   const [showBox, setShowBox] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
 
+  function download() {
+    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "logwizard-plan.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
@@ -50,16 +59,34 @@ export function BuildSteps({ plan }: { plan: Plan }) {
               <textarea id="plan-text" ref={box} readOnly rows={8} className={`${inputClass} mt-1 font-mono text-sm`} value={text} onFocus={(e) => e.currentTarget.select()} />
             </div>
           )}
-          <p className="mt-2 text-sm text-slate-700">You can also use Download plan as JSON on the review page and paste the file&apos;s text.</p>
+          <div className="mt-2">
+            <button type="button" className={button()} onClick={download}>Download plan as a file</button>
+          </div>
+          <p className="mt-2 text-sm text-slate-700">If copying does not work, use the download and open the file in a text editor, then copy its text.</p>
         </li>
         <li>
-          <strong>Paste it in the sheet.</strong> Open your copy and use the LogWizard menu, then Paste your plan. Paste, press Save, then reload
-          the sheet and use the new menu, then Activate.
+          <strong>Paste it in the sheet.</strong> Open your copy and use the LogWizard menu, then Paste your plan. Press Check plan, read the
+          list of people who will be emailed, then press Save this plan. Reload the sheet, then use the new menu and choose Activate.
           <p className="mt-2 text-sm text-slate-700">
-            The first time, Google shows a permission screen. The app is unverified while it is in testing, so Google adds a warning
-            you must click through. It asks to: work with this spreadsheet, manage forms, send email as you, run on a schedule, and show
-            sidebars and dialogs.
+            Use a private window, or a browser signed in to only one Google account. With two accounts signed in, Google can refuse
+            the Save button with a permission error.
           </p>
+          <p className="mt-2 text-sm text-slate-700">
+            The first time, Google shows a permission screen and an unverified-app warning. Click Advanced, then Go to the app (unsafe).
+            Google then lists what the sheet may do. These are the five items, in Google&apos;s words:
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-6 text-sm text-slate-700">
+            <li>View and manage spreadsheets that this application has been installed in. (The sheet only, not your other sheets.)</li>
+            <li>View and manage your forms in Google Drive. (The entry form the sheet creates.)</li>
+            <li>Send email as you. (Reminders and alerts, to the people listed in the plan.)</li>
+            <li>Allow this application to run when you are not present. (The hourly reminder check.)</li>
+            <li>Display and run third-party web content in prompts and sidebars inside Google applications. (The Add entry panel.)</li>
+          </ul>
+          <p className="mt-2 text-sm font-semibold text-slate-800">Safety checks</p>
+          <ul className="mt-1 list-disc space-y-1 pl-6 text-sm text-slate-700">
+            <li>Only use the Make your copy button on this page. Do not use a copy link someone else sent you.</li>
+            <li>Only paste a plan made on this page. A plan from someone else can add people who will be emailed your entries. Check the list before you save.</li>
+          </ul>
         </li>
       </ol>
     </section>
