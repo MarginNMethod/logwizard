@@ -195,3 +195,8 @@ Made from the template's `/copy` link in a private window, signed in to one acco
 
 **C1 end to end, real Google (2026-10-12, 8:31 PM)**
 After pasting the plan, reloading and using Employer Outreach Log > Activate, all tabs appeared (`All Employers`, `Education Log`, `Setup`, `Activity`). An entry saved from the sidebar landed in `All Employers` with `Entered by` set to the signed-in account, and was copied to `Education Log` ("Saved to All Employers and copied to Education Log"). So the path copy link, paste plan, Activate, add entry works with no step by the app other than showing the plan and the instructions. Spike 1 is closed: option C1 is the Phase 4 path.
+
+**C1 hardened flow, real Google (2026-10-12, evening)**
+- **First attempt failed:** on a fresh copy, **Check plan** did nothing. Cause: the paste dialog's browser script had a syntax error (newline escapes in a TypeScript template literal became real line breaks inside quoted strings), so the browser dropped the whole script. The 94 offline tests passed because none of them ran that script. Fixed in `4bf3587`, with tests that parse and run the dialog and sidebar scripts.
+- **Second attempt (after the fix):** Check plan worked. It showed the plan summary and the people who would be emailed. Google's permission screen listed five items. The owner then judged the summary text too cluttered; it now renders as headings and real bullet lists (`f0f1136`). That layout has not yet been seen in real Google.
+- **Informal time:** the owner estimated about 2 minutes from the approved-plan page to a working sheet. This was a guess with no stopwatch, by the person who built the system and knew every step. It is not a measurement and must not be quoted as the setup time.
