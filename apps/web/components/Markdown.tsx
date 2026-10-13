@@ -39,7 +39,7 @@ export function Markdown({ source }: { source: string }) {
       }
       const [head = [], ...body] = rows;
       out.push(
-        <div key={k++} className="my-3 overflow-x-auto">
+        <div key={k++} className="my-3 overflow-x-auto" role="region" tabIndex={0} aria-label="Table, scroll sideways to see every column">
           <table className="w-full border-collapse text-left text-sm">
             <thead><tr>{head.map((c, j) => <th key={j} scope="col" className="border border-slate-300 bg-slate-100 p-2">{inline(c)}</th>)}</tr></thead>
             <tbody>{body.map((r, ri) => <tr key={ri}>{r.map((c, j) => <td key={j} className="border border-slate-300 p-2 align-top">{inline(c)}</td>)}</tr>)}</tbody>

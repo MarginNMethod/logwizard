@@ -25,6 +25,8 @@ export function BuildSteps({ plan }: { plan: Plan }) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
+      // Clear the message so a second copy is announced again.
+      setTimeout(() => setCopied(false), 3000);
       setShowBox(false);
     } catch {
       // Clipboard blocked: show the plan in a box, selected, so the person can copy it by hand.
