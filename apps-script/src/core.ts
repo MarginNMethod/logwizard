@@ -915,10 +915,34 @@ function preparePlan(svc: Services, text: string): Prepared {
   return { ok: true, plan: again.plan, replacing: existing.ok };
 }
 
+export interface PreviewBlock {
+  /** h = heading, p = paragraph, li = bullet item */
+  t: "h" | "p" | "li";
+  s: string;
+}
+
 export interface PastePreview extends PasteResult {
   summary?: string;
   recipients?: string[];
   replacing?: boolean;
+  blocks?: PreviewBlock[];
+}
+
+/** Turn the plain-text summary into headings, paragraphs and bullet items so the dialog can lay it out cleanly. */
+export function previewBlocks(summary: string, recipients: string[], replacing: boolean): PreviewBlock[] {
+  const blocks: PreviewBlock[] = [];
+  for (const raw of summary.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith("- ")) blocks.push({ t: "li", s: line.slice(2).trim() });
+    else if (line.endsWith(":")) blocks.push({ t: "h", s: line.slice(0, -1) });
+    else blocks.push({ t: "p", s: line });
+  }
+  blocks.push({ t: "h", s: recipients.length ? "This sheet will email these people from your account" : "Who will be emailed" });
+  if (recipients.length) for (const r of recipients) blocks.push({ t: "li", s: r });
+  else blocks.push({ t: "p", s: "No one else will be emailed from this sheet." });
+  if (replacing) blocks.push({ t: "p", s: "This replaces the plan already saved in this sheet." });
+  return blocks;
 }
 
 /** Step 1 of saving: show what the plan does and who will receive its emails. Writes nothing. */
@@ -926,7 +950,7 @@ export function previewPlanFromPaste(svc: Services, text: string): PastePreview 
   const p = preparePlan(svc, text);
   if (!p.ok) return p;
   const recipients = [...new Set(p.plan.contributors.map((c) => c.email.toLowerCase()))];
-  return { ok: true, message: "Check this plan before you save it.", summary: plainEnglishSummary(p.plan), recipients, replacing: p.replacing };
+  return { ok: true, message: "Check this plan before you save it.", summary: plainEnglishSummary(p.plan), recipients, replacing: p.replacing, blocks: previewBlocks(plainEnglishSummary(p.plan), recipients, p.replacing) };
 }
 
 /**
@@ -955,7 +979,9 @@ const PASTE_DIALOG_HTML = `<!DOCTYPE html><html><head><base target="_top"><style
 body{font-family:Arial,sans-serif;font-size:13px;margin:12px}
 textarea{width:100%;box-sizing:border-box;height:200px;font-family:monospace;font-size:12px}
 button{padding:6px 14px;margin-top:8px;margin-right:6px}button:disabled{opacity:.5}
-#preview{display:none;white-space:pre-wrap;border:1px solid #888;padding:8px;margin-top:10px;max-height:220px;overflow:auto;font-size:12px}
+#preview{display:none;border:1px solid #888;padding:10px 14px;margin-top:10px;max-height:240px;overflow:auto;font-size:13px;line-height:1.45}
+#preview p{margin:0 0 8px}#preview .h{font-weight:bold;margin:12px 0 4px}#preview .h:first-child{margin-top:0}
+#preview ul{margin:0 0 8px;padding-left:22px;list-style:disc}#preview li{margin:2px 0}
 #msg{margin-top:10px;white-space:pre-wrap}.err{color:#b00020}.ok{color:#146c2e}
 </style></head><body>
 <p><label for="plan">On the LogWizard page, use "Copy your plan". Paste it here, press Check plan, read who will be emailed, then press Save this plan.</label></p>
@@ -974,8 +1000,11 @@ button{padding:6px 14px;margin-top:8px;margin-right:6px}button:disabled{opacity:
     check.disabled=true;show('Checking...','');
     google.script.run.withSuccessHandler(function(r){check.disabled=false;
       if(r&&r.ok){
-        var who=r.recipients&&r.recipients.length?'This sheet will email these people from your account:\\n'+r.recipients.join('\\n'):'No one else will be emailed from this sheet.';
-        preview.textContent=r.summary+'\\n\\n'+who+(r.replacing?'\\n\\nThis replaces the plan already saved in this sheet.':'');
+        preview.textContent='';var ul=null;
+        (r.blocks||[]).forEach(function(b){
+          if(b.t==='li'){if(!ul){ul=document.createElement('ul');preview.appendChild(ul);}var li=document.createElement('li');li.textContent=b.s;ul.appendChild(li);return;}
+          ul=null;var d=document.createElement(b.t==='h'?'div':'p');if(b.t==='h')d.className='h';d.textContent=b.s;preview.appendChild(d);
+        });
         preview.style.display='block';save.disabled=false;
         show('Read the list above. Press Save this plan only if you trust this plan.','ok');
       }else{reset();show(problems(r),'err');}
