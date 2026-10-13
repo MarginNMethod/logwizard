@@ -46,7 +46,7 @@ Ready to show, with two honest caveats that the documents now state up front:
 
 ## Risks a hiring manager could still find
 
-1. **The missing connecting step.** This is the biggest. It is stated plainly, but a skeptical reader may still ask why it is not built. The honest answer is scope: the project proves the safe-planning idea and the engine, and Phase 4 is the next piece.
+1. **No Google sign-in or one-click build.** The visitor copies a template and pastes the plan. This was tested end to end in real Google on 2026-10-12 and is stated plainly in the README and case study. A skeptical reader may ask why the app does not do it for them. The honest answer: the narrow Drive permission could not copy the template (tested), so the paste path was chosen; a Picker route is untested.
 2. **The eval is small and not independent.** Five held-out personas (written and committed before the run) passed 5 of 5, which answers the in-sample objection for those cases. The author of the personas, keys and prompt is the same, and each persona ran once. Stated in the case study.
 3. **No video walkthrough or sample sheet.** The demo script exists, the recording does not. A short screen recording of the live demo and one real Google sheet would make the evidence easier to scan.
 4. **"What I would do differently" is a draft.** It is written from the project record. It should be rewritten in the author's own words before the page is published.

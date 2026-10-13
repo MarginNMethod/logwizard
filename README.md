@@ -36,6 +36,7 @@ Read this section before quoting any claim from this repository. Dates are 2026-
 
 **Proven by hand in a real Google account (personal Gmail, 2026-10-12)**
 
+- The setup path a visitor follows: copy the template, paste the plan, Activate, add an entry. All five tabs appeared and the entry was saved and routed.
 - Activate builds the tabs, the Google Form and 2 triggers, and a second Activate changes nothing.
 - A contributor can submit through the Form with no permission prompt. The owner gets an alert email.
 - The sidebar saves an entry to the log and its routed copy.
@@ -49,7 +50,7 @@ Read this section before quoting any claim from this repository. Dates are 2026-
 
 **Not done, not tested**
 
-- **The step that connects the web app to Google is not built.** There is no Google sign-in in the web app, and it does not copy the template or install the engine for a visitor. Today the engine is installed by hand with `clasp` and tested directly. This is the main gap between the demo and the full product (`PLAN.md`, Phase 4).
+- **The web app does not build the system for the visitor.** There is no Google sign-in. Instead, after the plan is approved the page gives three steps: make a copy of the template (a Google link), copy the plan, paste it into the copy and click Activate. This path was run end to end in a real Google account on 2026-10-12 (`SPIKES.md`, Spike 1). The alternative, where the app copies the template itself with a Google Picker, was not built.
 - A Google Workspace account, a second Google account using the sidebar, and the daily send-limit warning paths have not been tested in real Google.
 - The planner has only run on plans recorded by Claude Code subagents. No live model call was made, by design.
 - The eval is small and not independent: 17 personas, one run each. 12 were used to tune the prompt, and 5 held-out personas were written and committed before the final run. All were written by the same author as the prompt (`evals/results-notes.v2.md`).

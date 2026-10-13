@@ -192,3 +192,6 @@ Made from the template's `/copy` link in a private window, signed in to one acco
 - Pasting the sample plan and clicking **Save** returned: "Plan saved. Reminders and alerts will go to <the account>, because you own this sheet. Now reload the sheet, then use the Employer Outreach Log menu > Activate." The `Activity` tab gained one info line. The owner email in the plan was replaced by the signed-in account, as designed.
 - **Browser-pane note:** the built-in browser pane blocks the pop-up Google uses for authorization, and two signed-in accounts caused a generic Google error. Both are test-tool limits. A normal private window with one account worked.
 - Not yet verified in this run: Activate, a form submit and an entry from the sidebar on the pasted plan, and a first email.
+
+**C1 end to end, real Google (2026-10-12, 8:31 PM)**
+After pasting the plan, reloading and using Employer Outreach Log > Activate, all tabs appeared (`All Employers`, `Education Log`, `Setup`, `Activity`). An entry saved from the sidebar landed in `All Employers` with `Entered by` set to the signed-in account, and was copied to `Education Log` ("Saved to All Employers and copied to Education Log"). So the path copy link, paste plan, Activate, add entry works with no step by the app other than showing the plan and the instructions. Spike 1 is closed: option C1 is the Phase 4 path.

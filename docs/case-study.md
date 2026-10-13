@@ -18,7 +18,7 @@ Plain-language terms: an **eval** runs the AI planner on sample answers and chec
 - A Google engine that I installed and ran in a real Google account. It built the sheet tabs, a Form and two triggers, took entries from the Form and the sidebar, and sent a digest and a follow-up reminder.
 - A synthetic eval set for the AI planner: 17 personas, 5 of them held out and committed before the run.
 
-**What does not exist.** The web app does not yet sign a visitor in to Google and install the engine for them. Today I install the engine by hand and test it directly. That connecting step is the main unfinished part, and I say so instead of showing a fake end-to-end flow.
+**How setup works.** The web app does not sign a visitor in to Google. After the plan is approved it shows three steps: make a copy of a template sheet (which carries the engine), copy the plan, and paste it into the sheet. Google's own copy page confirms the script comes along. I tested this in a real account: copy, paste, Activate, add an entry. I chose it after testing the alternative: an app with the narrow Drive permission could not copy the template (Google returned "not found"). It trades one manual paste for no extra Google permissions and no plan stored on my server.
 
 **Cost.** Zero. Free plans only, and no AI key on the server.
 
@@ -132,7 +132,7 @@ I built the system by hand five times (`PLAN.md` section 1) but did not record t
 
 ## What is not done
 
-- The web app does not sign a visitor in to Google or install the engine for them (`PLAN.md`, Phase 4). Everything the engine does was tested by installing it by hand.
+- The app does not build the system itself. The visitor copies a template and pastes the plan. A Google Picker route, where the app copies the template and writes the plan, was not tested.
 - Not tested in real Google: a Workspace account, a second Google account using the sidebar, and the daily send-limit warning paths.
 - Accessibility (WCAG 2.1 AA) has not been audited.
 - The video walkthrough and a public sample sheet have not been made (`docs/demo-script.md`).
