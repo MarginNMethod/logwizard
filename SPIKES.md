@@ -184,3 +184,11 @@ Setup: a template sheet with the bundled engine bound to it, owned by the owner 
 - **(c) "Make a copy" link: works, and the engine comes along.** Opening `/spreadsheets/d/<template>/copy` as the visitor showed "The attached Apps Script file and functionality will also be copied". After Make a copy, the visitor's copy showed the engine's `LogWizard` menu, so the bound script was copied and its `onOpen` ran.
 - **Consequence of (c).** The visitor made the copy, not the app, so the app's `drive.file` token cannot write the plan into it. The plan must reach `_plan` another way: the user pastes it, or the engine fetches it.
 - **(b) Google Picker: not yet tested.** If the user picks the template in the Picker, `drive.file` access is granted for that file, then `files.copy` should work and the copy is app-created, so the app can also write `_plan`. Needs a free Google Cloud project with an OAuth client and a Picker API key.
+
+**C1 paste flow, first real-Google run (2026-10-12)**
+Made from the template's `/copy` link in a private window, signed in to one account (the owner account, acting as visitor).
+- The copy's blank sheet showed a `LogWizard` menu with exactly **Paste your plan** and **Help**.
+- First use asked for authorization. The list showed five items (spreadsheets, forms in Drive, send email, run when not present, display third-party web content in sidebars), the same five as before. No Gmail-read, full Drive or contacts permission. The sixth pinned scope (`userinfo.email`) was not listed on the screen, yet the engine still received the signed-in email.
+- Pasting the sample plan and clicking **Save** returned: "Plan saved. Reminders and alerts will go to <the account>, because you own this sheet. Now reload the sheet, then use the Employer Outreach Log menu > Activate." The `Activity` tab gained one info line. The owner email in the plan was replaced by the signed-in account, as designed.
+- **Browser-pane note:** the built-in browser pane blocks the pop-up Google uses for authorization, and two signed-in accounts caused a generic Google error. Both are test-tool limits. A normal private window with one account worked.
+- Not yet verified in this run: Activate, a form submit and an entry from the sidebar on the pasted plan, and a first email.
